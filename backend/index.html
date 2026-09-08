@@ -1,0 +1,3532 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HỆ THỐNG GIÁM SÁT GIAO THÔNG AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f16;
+      --bg-soft: #0f141c;
+      --panel: #131a24;
+      --panel-hover: #161e2a;
+      --border: #232c38;
+      --border-soft: #1a212b;
+      --accent: #4fb2ff;
+      --accent-soft: rgba(79, 178, 255, 0.12);
+      --accent2: #3ddc97;
+      --accent2-soft: rgba(61, 220, 151, 0.12);
+      --danger: #ff6b6b;
+      --danger-soft: rgba(255, 107, 107, 0.12);
+      --warn: #ffc24b;
+      --warn-soft: rgba(255, 194, 75, 0.12);
+      --text: #eef2f7;
+      --dim: #8b97a8;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.25)
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      background: radial-gradient(circle at 20% -10%, #101823 0%, var(--bg) 45%);
+      color: var(--text);
+      font-family: Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      overflow-x: hidden;
+      letter-spacing: 0
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border-soft);
+      background: rgba(15, 20, 28, 0.92);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      border: 1.5px solid var(--border);
+      background: var(--accent-soft);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      animation: pulse 3s ease-in-out infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 rgba(79, 178, 255, 0.25)
+      }
+
+      50% {
+        box-shadow: 0 0 14px rgba(79, 178, 255, 0.35)
+      }
+    }
+
+    .logo h1 {
+      font-family: Inter, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.2px
+    }
+
+    .logo p {
+      font-family: Inter, sans-serif;
+      font-size: 13px;
+      color: var(--dim);
+      letter-spacing: 0.5px;
+      font-weight: 500;
+      margin-top: 1px
+    }
+
+    .hstats {
+      display: flex;
+      gap: 22px
+    }
+
+    .hs {
+      display: flex;
+      flex-direction: column;
+      align-items: center
+    }
+
+    .hs .v {
+      font-family: Inter, sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums
+    }
+
+    .hs .l {
+      font-size: 10.5px;
+      color: var(--dim);
+      letter-spacing: 0.3px;
+      font-weight: 500;
+      margin-top: 1px
+    }
+
+    .online {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: Inter, sans-serif;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--accent2)
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent2);
+      box-shadow: 0 0 6px rgba(61, 220, 151, 0.6);
+      animation: blink 1.5s ease-in-out infinite
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.35
+      }
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+      padding: 18px 24px;
+      max-width: 1600px;
+      margin: 0 auto
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden
+    }
+
+    .panel::before {
+      content: none
+    }
+
+    .ph {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-soft)
+    }
+
+    .pt {
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      color: var(--text)
+    }
+
+    .pb {
+      font-family: Inter, sans-serif;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--dim);
+      letter-spacing: 0.3px
+    }
+
+    /* TABS (vertical sidebar, bên trái) */
+    .panel-split {
+      display: flex;
+      align-items: stretch
+    }
+
+    .tabs {
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 148px;
+      border-right: 1px solid var(--border)
+    }
+
+    .tab {
+      padding: 12px 12px;
+      text-align: left;
+      cursor: pointer;
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: 0.1px;
+      color: var(--dim);
+      border: none;
+      background: transparent;
+      transition: all 0.15s;
+      border-left: 2px solid transparent;
+      border-bottom: 1px solid var(--border-soft);
+      line-height: 1.4
+    }
+
+    .tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.03)
+    }
+
+    .tab.active {
+      color: var(--accent);
+      font-weight: 600;
+      border-left-color: var(--accent);
+      background: rgba(79, 178, 255, 0.08)
+    }
+
+    .tab-panels {
+      flex: 1;
+      min-width: 0
+    }
+
+    .tab-content {
+      display: none
+    }
+
+    .tab-content.active {
+      display: block
+    }
+
+    @media(max-width:1100px) {
+      .panel-split {
+        flex-direction: column
+      }
+
+      .tabs {
+        flex: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+        border-right: none;
+        border-bottom: 1px solid var(--border)
+      }
+
+      .tab {
+        flex: 1 1 auto;
+        text-align: center;
+        border-left: none;
+        border-bottom: 2px solid transparent
+      }
+
+      .tab.active {
+        border-left-color: transparent;
+        border-bottom-color: var(--accent)
+      }
+    }
+
+    /* UPLOAD */
+    .uz {
+      margin: 14px;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(79,178,255, 0.02)
+    }
+
+    .uz:hover,
+    .uz.drag {
+      border-color: var(--accent);
+      background: rgba(79,178,255, 0.06)
+    }
+
+    .uz input {
+      display: none
+    }
+
+    .uz h3 {
+      font-family: Inter, sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      color: var(--accent);
+      margin: 8px 0 4px
+    }
+
+    .uz p {
+      font-size: 12.5px;
+      color: var(--dim);
+      font-family: Inter, sans-serif
+    }
+
+    /* CANVAS */
+    .cw {
+      margin: 0 14px 10px;
+      position: relative;
+      background: #000;
+      border: 1px solid var(--border);
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden
+    }
+
+    .cw canvas {
+      max-width: 100%;
+      display: none;
+      cursor: crosshair
+    }
+
+    .cph {
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      color: rgba(79,178,255, 0.2);
+      letter-spacing: 0.4px
+    }
+
+    /* VIDEO */
+    .vw {
+      margin: 0 14px 10px;
+      background: #000;
+      border: 1px solid var(--border);
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .vw video {
+      max-width: 100%;
+      max-height: 320px;
+      display: none
+    }
+
+    .vph {
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      color: rgba(79,178,255, 0.2);
+      letter-spacing: 0.4px
+    }
+
+    /* REALTIME */
+    .rtw {
+      margin: 0 14px 10px;
+      position: relative;
+      background: #000;
+      border: 1px solid var(--border);
+      min-height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden
+    }
+
+    .rtw video,
+    .rtw canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain
+    }
+
+    /* DRAW CONTROLS */
+    .dc {
+      display: flex;
+      gap: 6px;
+      padding: 0 14px 8px;
+      flex-wrap: wrap
+    }
+
+    .dbtn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--dim);
+      font-family: Inter, sans-serif;
+      font-size: 11.5px;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 8px
+    }
+
+    .dbtn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(79,178,255, 0.08)
+    }
+
+    .dbtn.red.active {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: rgba(255,107,107, 0.08)
+    }
+
+    .dbtn.green.active {
+      border-color: var(--accent2);
+      color: var(--accent2);
+      background: rgba(61,220,151, 0.08)
+    }
+
+    /* Nút icon nhỏ trên card giám sát đa cam (ROI/vạch/đèn) */
+    .cam-actions button.active {
+      box-shadow: 0 0 0 2px #fff inset;
+      filter: brightness(1.25)
+    }
+
+    /* BTNS */
+    .controls {
+      display: flex;
+      gap: 8px;
+      padding: 0 14px 12px
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--panel-hover);
+      color: var(--text);
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.1px;
+      cursor: pointer;
+      transition: all 0.15s
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: #333f4d
+    }
+
+    .bp {
+      border-color: rgba(79, 178, 255, 0.4);
+      background: var(--accent-soft);
+      color: var(--accent)
+    }
+
+    .bs {
+      border-color: rgba(61, 220, 151, 0.4);
+      background: var(--accent2-soft);
+      color: var(--accent2)
+    }
+
+    .bd {
+      border-color: rgba(255, 107, 107, 0.4);
+      background: var(--danger-soft);
+      color: var(--danger)
+    }
+
+    .bw {
+      border-color: rgba(255, 194, 75, 0.4);
+      background: var(--warn-soft);
+      color: var(--warn)
+    }
+
+    .btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed
+    }
+
+    .lb {
+      height: 2px;
+      background: var(--border);
+      margin: 0 14px 8px;
+      overflow: hidden;
+      display: none
+    }
+
+    .lb.active {
+      display: block
+    }
+
+    .lb::after {
+      content: '';
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: load 1.2s linear infinite
+    }
+
+    @keyframes load {
+      from {
+        transform: translateX(-100%)
+      }
+
+      to {
+        transform: translateX(200%)
+      }
+    }
+
+    /* LIGHT */
+    .ld {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .lc {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #333;
+      border: 2px solid var(--border);
+      transition: all 0.3s
+    }
+
+    .lc.red {
+      background: var(--danger);
+      box-shadow: 0 0 15px rgba(255,107,107, 0.6)
+    }
+
+    .lc.green {
+      background: var(--accent2);
+      box-shadow: 0 0 15px rgba(61,220,151, 0.6)
+    }
+
+    .ll {
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      letter-spacing: 0.2px
+    }
+
+    /* RIGHT */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px
+    }
+
+    .right-col .panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0
+    }
+
+    .dl {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: 200px;
+      overflow-y: auto
+    }
+
+    .dl::-webkit-scrollbar {
+      width: 3px
+    }
+
+    .dl::-webkit-scrollbar-thumb {
+      background: var(--border)
+    }
+
+    .di {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent2);
+      background: rgba(61,220,151, 0.03);
+      animation: si 0.3s ease
+    }
+
+    .di.vio {
+      border-left-color: var(--danger);
+      background: rgba(255,107,107, 0.05)
+    }
+
+    @keyframes si {
+      from {
+        opacity: 0;
+        transform: translateX(8px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0)
+      }
+    }
+
+    .dt {
+      font-family: Inter, sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent2)
+    }
+
+    .di.vio .dt {
+      color: var(--danger)
+    }
+
+    .dc2 {
+      font-family: Inter, sans-serif;
+      font-size: 12px;
+      color: var(--dim);
+      margin-top: 1px
+    }
+
+    .cb {
+      width: 44px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 8px;
+      overflow: hidden
+    }
+
+    .cf {
+      height: 100%;
+      background: var(--accent2);
+      border-radius: 8px
+    }
+
+    .pl {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px
+    }
+
+    .pi {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: rgba(79,178,255, 0.03);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: si 0.3s ease
+    }
+
+    .pn {
+      font-family: Inter, sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--accent);
+      letter-spacing: 0.4px;
+      text-shadow: 0 0 10px rgba(79,178,255, 0.5)
+    }
+
+    .pm {
+      font-family: Inter, sans-serif;
+      font-size: 12px;
+      color: var(--dim)
+    }
+
+    .vl {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      min-height: 140px;
+      overflow-y: auto
+    }
+
+    .vi2 {
+      padding: 8px 10px;
+      border: 1px solid var(--danger);
+      background: rgba(255,107,107, 0.05);
+      animation: si 0.3s ease
+    }
+
+    .vh {
+      font-family: Inter, sans-serif;
+      font-size: 12px;
+      color: var(--danger);
+      margin-bottom: 3px
+    }
+
+    .vp {
+      font-family: Inter, sans-serif;
+      font-size: 14.5px;
+      font-weight: 900;
+      color: var(--warn);
+      letter-spacing: 0.3px
+    }
+
+    .vt {
+      font-family: Inter, sans-serif;
+      font-size: 12px;
+      color: var(--dim)
+    }
+
+    .lb2 {
+      padding: 8px;
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      flex: 1;
+      min-height: 140px;
+      overflow-y: auto;
+      line-height: 1.9
+    }
+
+    .lb2::-webkit-scrollbar {
+      width: 3px
+    }
+
+    .lb2::-webkit-scrollbar-thumb {
+      background: var(--border)
+    }
+
+    .le {
+      color: var(--dim)
+    }
+
+    .le.ok {
+      color: var(--accent2)
+    }
+
+    .le.err {
+      color: var(--danger)
+    }
+
+    .le.info {
+      color: var(--accent)
+    }
+
+    .le.warn {
+      color: var(--warn)
+    }
+
+    .empty {
+      padding: 20px;
+      text-align: center;
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      color: var(--dim);
+      letter-spacing: 0.3px
+    }
+
+    /* PROGRESS */
+    .progress-wrap {
+      margin: 0 14px 8px;
+      display: none
+    }
+
+    .progress-wrap.show {
+      display: block
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 4px
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      transition: width 0.3s;
+      width: 0%
+    }
+
+    .progress-text {
+      font-family: Inter, sans-serif;
+      font-size: 12.5px;
+      color: var(--dim);
+      text-align: center
+    }
+
+    @media(max-width:1100px) {
+      main {
+        grid-template-columns: 1fr
+      }
+
+      .right-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    /* Trạng thái focus rõ ràng, dễ chịu cho tất cả input/textarea/select trong hệ thống */
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 3px var(--accent-soft)
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #556170
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 8px
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #333f4d
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay"
+    style="position:fixed;inset:0;z-index:999;background:radial-gradient(circle at 50% 30%,#131c28 0%,#080b10 65%);display:flex;align-items:center;justify-content:center">
+    <div
+      style="width:360px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,0.45)">
+      <div style="text-align:center;margin-bottom:24px">
+        <div
+          style="width:56px;height:56px;margin:0 auto 12px;border-radius:14px;background:var(--accent-soft);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:26px">
+          🚦</div>
+        <h1 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 4px">Traffic Vision AI</h1>
+        <p style="font-size:12.5px;color:var(--dim)">Đăng nhập hệ thống nội bộ</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input id="loginUser" placeholder="Tên đăng nhập" autocomplete="username" class="login-input"
+          style="background:#0e141d;border:1px solid var(--border);color:var(--text);padding:11px 13px;font-size:13.5px;border-radius:10px;font-family:Inter,sans-serif;outline:none">
+        <input id="loginPass" type="password" placeholder="Mật khẩu" autocomplete="current-password" class="login-input"
+          style="background:#0e141d;border:1px solid var(--border);color:var(--text);padding:11px 13px;font-size:13.5px;border-radius:10px;font-family:Inter,sans-serif;outline:none"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="btn bp" onclick="doLogin()" style="padding:11px;font-size:13px;font-weight:700">Đăng nhập</button>
+        <div id="loginError" style="color:var(--danger);font-size:12.5px;text-align:center;min-height:14px"></div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🚦</div>
+      <div>
+        <h1>Traffic Vision AI</h1>
+        <p>INTELLIGENT SURVEILLANCE SYSTEM v3.0</p>
+      </div>
+    </div>
+    <div class="hstats"
+      style="background:var(--panel);border:1px solid var(--border-soft);border-radius:12px;padding:8px 18px;gap:18px">
+      <div class="hs"><span class="v" id="hV">0</span><span class="l">Xe</span></div>
+      <div class="hs" style="border-left:1px solid var(--border-soft);padding-left:18px;margin-left:0"><span class="v" id="hP">0</span><span class="l">Biển số</span></div>
+      <div class="hs" style="border-left:1px solid var(--border-soft);padding-left:18px;margin-left:0"><span class="v" id="hVio">0</span><span class="l">Vi phạm</span></div>
+      <div class="hs" style="border-left:1px solid var(--border-soft);padding-left:18px;margin-left:0"><span class="v" id="hS">0</span><span class="l">Lượt quét</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div id="userBadge"
+        style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--dim);text-align:right;display:none">
+        <div id="userBadgeName" style="color:var(--text)"></div>
+        <div id="userBadgeRole" style="color:var(--accent)"></div>
+      </div>
+      <button class="btn" id="btnLogout" onclick="doLogout()" style="display:none;padding:6px 10px;font-size:12px">⏻ ĐĂNG
+        XUẤT</button>
+      <div class="online">
+        <div class="dot"></div><span>HỆ THỐNG HOẠT ĐỘNG</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div>
+      <div class="panel">
+        <div class="ph"><span class="pt">📡 Camera Feed</span><span class="pb" id="feedStatus">STANDBY</span></div>
+
+        <div class="panel-split">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('violation')">🚨 VI PHẠM ẢNH</button>
+          <button class="tab" onclick="switchTab('video')">🎬 VIDEO</button>
+          <button class="tab" onclick="switchTab('lookup')">🔍 TRA CỨU</button>
+          <button class="tab" onclick="switchTab('unread')">❓ CHƯA RÕ BIỂN</button>
+          <button class="tab" onclick="switchTab('grid')">🖥️ GIÁM SÁT ĐA CAM</button>
+          <button class="tab" id="tabBtnAdmin" onclick="switchTab('admin')" style="display:none">⚙️ QUẢN TRỊ</button>
+          <button class="tab" onclick="switchTab('report')">📊 BÁO CÁO</button>
+        </div>
+        <div class="tab-panels">
+
+        <!-- TAB 2: VIOLATION IMAGE -->
+        <div class="tab-content active" id="tab-violation">
+          <div class="uz" id="uz2"><input type="file" id="fi2" accept="image/*">
+            <div style="font-size:32px">🎥</div>
+            <h3>Tải Ảnh Giao Thông</h3>
+            <p>Vẽ ROI, vạch dừng rồi kiểm tra</p>
+          </div>
+          <div class="cw" id="cw2">
+            <div class="cph">[ NO FEED ]</div><canvas id="c2"></canvas>
+          </div>
+          <div class="lb" id="lb2"></div>
+          <div class="ld">
+            <div class="lc" id="lc2"></div><span class="ll" id="ll2" style="color:var(--dim)">CHƯA CHỌN ĐÈN</span>
+          </div>
+          <div style="padding:0 14px 6px">
+            <div style="font-family:Inter,sans-serif;font-size:12px;color:var(--dim)">&#128071; VẼ ROI: click 4
+              điểm theo góc đường &nbsp;|&nbsp; VẠCH DỪNG: click 2 điểm theo góc nghiêng</div>
+          </div>
+          <div class="dc">
+            <button class="dbtn" id="bROI" onclick="setMode('roi')">📦 VẼ ROI</button>
+            <button class="dbtn" id="bLine" onclick="setMode('line')">➖ VẠCH DỪNG</button>
+            <button class="dbtn red" id="bRed" onclick="setLight('RED')">🔴 ĐÈN ĐỎ</button>
+            <button class="dbtn green" id="bGreen" onclick="setLight('GREEN')">🟢 ĐÈN XANH</button>
+            <button class="dbtn" onclick="clearDraw()">🗑 XÓA VẼ</button>
+          </div>
+          <div class="controls">
+            <button class="btn bd" id="btnVio2" disabled onclick="checkViolation()">🚨 KIỂM TRA VI PHẠM</button>
+            <button class="btn" onclick="clearT2()">✕ XÓA</button>
+          </div>
+        </div>
+
+        <!-- TAB 3: VIDEO -->
+        <div class="tab-content" id="tab-video">
+          <div class="uz" id="uz3"><input type="file" id="fi3" accept="video/*">
+            <div style="font-size:32px">🎬</div>
+            <h3>Tải Video Lên</h3>
+            <p>MP4, AVI, MOV...</p>
+          </div>
+          <div class="vw" id="vw3">
+            <div class="vph">[ NO VIDEO ]</div><video id="vidIn" controls></video>
+          </div>
+          <div class="cw" id="cwVid" style="display:none">
+            <canvas id="cVid"></canvas>
+          </div>
+          <div style="padding:0 14px 8px;display:none" id="vidFrameHint">
+            <div style="font-family:Inter,sans-serif;font-size:12px;color:var(--dim)">&#128249; Frame đầu tiên —
+              VẼ ROI: click 4 điểm theo góc đường &nbsp;|&nbsp; VẠCH DỪNG: click 2 điểm theo góc nghiêng</div>
+          </div>
+          <div class="dc" id="dcVid" style="display:none">
+            <button class="dbtn" id="bROIVid" onclick="setModeVid('roi')">📦 VẼ ROI</button>
+            <button class="dbtn" id="bLineVid" onclick="setModeVid('line')">➖ VẠCH DỪNG</button>
+            <button class="dbtn" onclick="clearDrawVid()">🗑 XÓA VẼ</button>
+          </div>
+          <div class="lb" id="lb3"></div>
+          <div class="progress-wrap" id="progWrap">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progFill"></div>
+            </div>
+            <div class="progress-text" id="progText">Đang xử lý video...</div>
+          </div>
+          <div style="padding:0 14px 10px;border-bottom:1px solid var(--border);margin-bottom:8px">
+            <div
+              style="font-family:Inter,sans-serif;font-size:12px;color:var(--accent);letter-spacing:0.3px;margin-bottom:8px;margin-top:8px">
+              &#128197; LỊCH ĐÈN THEO GIÂY</div>
+            <div id="scheduleList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;min-height:20px">
+            </div>
+            <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+              <input id="schFrom" type="number" min="0" placeholder="Từ (s)"
+                style="width:70px;padding:5px 6px;background:#0e141d;border:1px solid var(--border);color:var(--text);font-size:13.5px;border-radius:8px">
+              <span style="color:var(--dim);font-size:13px">→</span>
+              <input id="schTo" type="number" min="0" placeholder="Đến (s)"
+                style="width:70px;padding:5px 6px;background:#0e141d;border:1px solid var(--border);color:var(--text);font-size:13.5px;border-radius:8px">
+              <button class="dbtn red" onclick="addSchedule('RED')">🔴 Đỏ</button>
+              <button class="dbtn green" onclick="addSchedule('GREEN')">🟢 Xanh</button>
+              <button class="dbtn" onclick="clearSchedule()" style="margin-left:auto">🗑</button>
+            </div>
+            <div style="font-family:Inter,sans-serif;font-size:12px;color:var(--dim);margin-top:5px">Mặc định:
+              đèn đỏ toàn bộ nếu chưa thêm lịch</div>
+          </div>
+          <div class="controls">
+            <button class="btn bw" id="btnProc" disabled onclick="processVideo()">▶ XỬ LÝ VIDEO</button>
+            <button class="btn" onclick="clearT3()">✕ XÓA</button>
+          </div>
+          <!-- Video output -->
+          <div id="vidOutWrap" style="display:none;margin:0 14px 12px">
+            <div class="ph" style="margin-bottom:6px"><span class="pt">📽 VIDEO KẾT QUẢ</span></div>
+            <video id="vidOut" controls style="width:100%;border:1px solid var(--border);background:#000"></video>
+            <button class="btn bs" style="margin-top:8px;width:100%" onclick="downloadVideo()">⬇ TẢI VIDEO KẾT
+              QUẢ</button>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-lookup">
+          <div style="padding:12px">
+            <div
+              style="font-family:Inter,sans-serif;font-size:12px;color:var(--accent);letter-spacing:0.3px;margin-bottom:10px">
+              🔍 TRA CỨU PHẠT NGUỘI — NGHỊ ĐỊNH 168/2024/NĐ-CP</div>
+
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <input id="lookupInput" type="text" placeholder="Nhập biển số (VD: 51G-12345)" maxlength="12"
+                style="flex:1;padding:8px 12px;background:#0e141d;border:1px solid var(--border);color:var(--text);font-family:Inter,sans-serif;font-size:14.5px;letter-spacing:0.3px;text-transform:uppercase;outline:none"
+                oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')lookupPlate()">
+              <button class="btn bs" onclick="lookupPlate()" style="padding:8px 16px;white-space:nowrap">🔍 TRA
+                CỨU</button>
+            </div>
+
+            <div id="lookupStatus"
+              style="font-family:Inter,sans-serif;font-size:13px;color:var(--dim);margin-bottom:8px">> Nhập
+              biển số để tra cứu...</div>
+
+            <!-- Summary -->
+            <div id="lookupSummary" style="display:none;margin-bottom:12px">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">
+                <div
+                  style="background:rgba(79,178,255,0.08);border:1px solid var(--border);padding:10px;text-align:center">
+                  <div id="lkTotal" style="font-family:Inter,sans-serif;font-size:22px;color:var(--accent)">0</div>
+                  <div style="font-size:12px;color:var(--dim);margin-top:2px">TỔNG VI PHẠM</div>
+                </div>
+                <div style="background:rgba(255,107,107,0.08);border:1px solid #ff323288;padding:10px;text-align:center">
+                  <div id="lkChua" style="font-family:Inter,sans-serif;font-size:22px;color:var(--danger)">0</div>
+                  <div style="font-size:12px;color:var(--dim);margin-top:2px">CHƯA XỬ PHẠT</div>
+                </div>
+                <div style="background:var(--accent2-soft);border:1px solid rgba(61,220,151,0.4);padding:10px;text-align:center">
+                  <div id="lkDa" style="font-family:Inter,sans-serif;font-size:22px;color:var(--accent2)">0</div>
+                  <div style="font-size:12px;color:var(--dim);margin-top:2px">ĐÃ XỬ PHẠT</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Results list -->
+            <div id="lookupResults" style="display:flex;flex-direction:column;gap:8px;max-height:460px;overflow-y:auto">
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-unread">
+          <div style="padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+              <div style="font-family:Inter,sans-serif;font-size:12px;color:var(--warn);letter-spacing:0.3px">❓ VI PHẠM
+                CHƯA ĐỌC ĐƯỢC BIỂN — CẦN TRA THỦ CÔNG</div>
+              <button class="btn bw" onclick="loadUnreadPlates()"
+                style="flex:none;padding:6px 12px;font-size:11.5px;white-space:nowrap">🔄 TẢI LẠI</button>
+            </div>
+            <div id="unreadStatus"
+              style="font-family:Inter,sans-serif;font-size:13px;color:var(--dim);margin-bottom:8px">> Đang tải
+              danh sách...</div>
+            <div id="unreadResults" style="display:flex;flex-direction:column;gap:8px;max-height:460px;overflow-y:auto">
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-grid">
+          <div style="padding:12px">
+            <div
+              style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+              <div style="font-family:Inter,sans-serif;font-size:12px;color:var(--accent);letter-spacing:0.3px">🖥️ GIÁM
+                SÁT NHIỀU CAMERA — LIVE STREAM</div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="font-family:Inter,sans-serif;font-size:12px;color:var(--dim)">CỠ KHUNG:</span>
+                  <button class="dbtn" id="gridColsBtn1" onclick="setGridCols(1)"
+                    style="padding:5px 9px;font-size:11.5px">1 CỘT (LỚN)</button>
+                  <button class="dbtn active" id="gridColsBtn2" onclick="setGridCols(2)"
+                    style="padding:5px 9px;font-size:11.5px">2 CỘT</button>
+                  <button class="dbtn" id="gridColsBtn3" onclick="setGridCols(3)"
+                    style="padding:5px 9px;font-size:11.5px">3 CỘT (NHỎ)</button>
+                </div>
+                <button class="btn bs" onclick="openCamSetup(null)"
+                  style="padding:6px 14px;font-size:12px;white-space:nowrap">➕ THÊM CAMERA</button>
+                <button class="btn bw" id="recAllBtn" onclick="toggleAllRecording()"
+                  style="padding:6px 14px;font-size:12px;white-space:nowrap">⏺ GHI TẤT CẢ</button>
+              </div>
+            </div>
+            <div id="gridStatus"
+              style="font-family:Inter,sans-serif;font-size:13px;color:var(--dim);margin-bottom:8px">> Chưa có
+              camera nào. Bấm "➕ THÊM CAMERA" để bắt đầu.</div>
+            <div id="savedCamsBox"></div>
+            <div id="camGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px"></div>
+          </div>
+        </div>
+
+        <!-- MODAL CẤU HÌNH CAMERA -->
+        <div id="camSetupModal"
+          style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.85);align-items:center;justify-content:center">
+          <div
+            style="background:#131a24;border:1px solid var(--border);border-radius:12px;width:min(820px,95vw);max-height:92vh;overflow-y:auto;display:flex;flex-direction:column">
+            <!-- Header -->
+            <div
+              style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)">
+              <div style="font-family:Inter,sans-serif;font-size:13px;color:var(--accent);letter-spacing:0.3px"
+                id="setupModalTitle">⚙️ CẤU HÌNH CAMERA</div>
+              <button onclick="closeCamSetup()"
+                style="background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;line-height:1">✕</button>
+            </div>
+            <div style="display:flex;gap:0;flex:1">
+              <!-- Cột trái: Canvas vẽ -->
+              <div
+                style="flex:1.4;padding:14px;display:flex;flex-direction:column;gap:8px;border-right:1px solid var(--border)">
+                <div style="font-size:12px;color:var(--dim);font-family:Inter,sans-serif" id="setupHint">Chọn
+                  nguồn video rồi bấm TẢI để bắt đầu cấu hình.</div>
+                <div
+                  style="position:relative;background:#000;border:1px solid var(--border);border-radius:8px;min-height:220px;overflow:hidden">
+                  <video id="setupVid" muted loop
+                    style="display:none;width:100%;height:100%;object-fit:contain"></video>
+                  <canvas id="setupCanvas"
+                    style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair"></canvas>
+                  <div id="setupPh"
+                    style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px">
+                    [ CHỌN NGUỒN VIDEO ]</div>
+                </div>
+                <!-- Nút vẽ -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                  <button class="dbtn" id="setupBtnRoi" onclick="setupSetMode('roi')"
+                    style="font-size:12px;padding:5px 10px">📦 VẼ ROI (4 điểm)</button>
+                  <button class="dbtn" id="setupBtnLine" onclick="setupSetMode('line')"
+                    style="font-size:12px;padding:5px 10px">➖ VẼ VẠCH DỪNG</button>
+                  <button class="dbtn" onclick="setupClearDraw()" style="font-size:12px;padding:5px 10px">🗑 XOÁ
+                    VẼ</button>
+                </div>
+                <div id="setupDrawHint"
+                  style="font-size:12px;color:var(--accent);font-family:Inter,sans-serif;min-height:14px"></div>
+              </div>
+              <!-- Cột phải: Cấu hình -->
+              <div style="flex:1;padding:14px;display:flex;flex-direction:column;gap:12px">
+                <!-- Thông tin camera -->
+                <div>
+                  <div style="font-size:12px;color:var(--dim);margin-bottom:6px;letter-spacing:0.2px">THÔNG TIN CAMERA
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <input id="setupName" placeholder="Tên camera (VD: Ngã tư Hàng Xanh)"
+                      style="background:#0e141d;border:1px solid var(--border);color:var(--text);padding:7px 10px;font-size:13px;border-radius:8px">
+                    <input id="setupDistrict" placeholder="Quận / Tuyến đường"
+                      style="background:#0e141d;border:1px solid var(--border);color:var(--text);padding:7px 10px;font-size:13px;border-radius:8px">
+                  </div>
+                </div>
+                <!-- Nguồn video -->
+                <div>
+                  <div style="font-size:12px;color:var(--dim);margin-bottom:6px;letter-spacing:0.2px">NGUỒN VIDEO</div>
+                  <div style="display:flex;gap:6px">
+                    <select id="setupType"
+                      style="flex:1;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:7px 8px;font-size:13px;border-radius:8px">
+                      <option value="video">🎬 Video tải lên</option>
+                      <option value="webcam">📹 Webcam máy tính</option>
+                    </select>
+                    <button class="btn bs" onclick="setupLoadSource()"
+                      style="padding:7px 12px;font-size:12px;white-space:nowrap">▶ TẢI</button>
+                  </div>
+                  <input type="file" id="setupFileInput" accept="video/*" style="display:none">
+                </div>
+                <!-- Đèn giao thông -->
+                <div>
+                  <div style="font-size:12px;color:var(--dim);margin-bottom:6px;letter-spacing:0.2px">⚡ TRẠNG THÁI ĐÈN MẶC
+                    ĐỊNH</div>
+                  <div style="display:flex;gap:6px">
+                    <button class="dbtn red active" id="setupBtnRed" onclick="setupSetLight('RED')"
+                      style="flex:1;padding:7px;font-size:12.5px">🔴 ĐÈN ĐỎ</button>
+                    <button class="dbtn green" id="setupBtnGreen" onclick="setupSetLight('GREEN')"
+                      style="flex:1;padding:7px;font-size:12.5px">🟢 ĐÈN XANH</button>
+                  </div>
+                </div>
+                <!-- Lịch đèn theo giây -->
+                <div>
+                  <div style="font-size:12px;color:var(--dim);margin-bottom:6px;letter-spacing:0.2px">📅 LỊCH ĐÈN THEO GIÂY
+                    (tuỳ chọn)</div>
+                  <div id="setupScheduleList"
+                    style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto;margin-bottom:6px">
+                  </div>
+                  <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+                    <input id="setupFrom" type="number" placeholder="Từ(s)" min="0"
+                      style="width:58px;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:5px 6px;font-size:12.5px;border-radius:8px">
+                    <span style="color:var(--dim);font-size:12.5px">→</span>
+                    <input id="setupTo" type="number" placeholder="Đến(s)" min="1"
+                      style="width:58px;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:5px 6px;font-size:12.5px;border-radius:8px">
+                    <button class="dbtn red" id="setupAddRed" onclick="setupAddSchedule('RED')"
+                      style="padding:5px 8px;font-size:12px">🔴</button>
+                    <button class="dbtn green" id="setupAddGreen" onclick="setupAddSchedule('GREEN')"
+                      style="padding:5px 8px;font-size:12px">🟢</button>
+                  </div>
+                  <div style="font-size:11.5px;color:var(--dim);margin-top:4px">Mặc định: đèn đỏ toàn bộ nếu chưa thêm lịch
+                  </div>
+                </div>
+                <!-- Nút lưu -->
+                <div style="margin-top:auto;display:flex;gap:8px">
+                  <button class="btn bp" onclick="saveCamSetup()" style="flex:1;padding:10px;font-size:13px">💾 LƯU &
+                    BẮT ĐẦU GIÁM SÁT</button>
+                  <button class="btn" onclick="closeCamSetup()" style="padding:10px 14px;font-size:12.5px">Huỷ</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL: phóng ảnh + nhập biển số thủ công (tab CHƯA RÕ BIỂN) -->
+        <div id="unreadPlateModal"
+          style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);align-items:center;justify-content:center">
+          <div
+            style="background:#131a24;border:1px solid var(--border);border-radius:12px;width:min(560px,95vw);max-height:92vh;overflow-y:auto;display:flex;flex-direction:column">
+            <div
+              style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)">
+              <div style="font-family:Inter,sans-serif;font-size:13px;color:var(--warn);letter-spacing:0.3px">🔍 TRA
+                BIỂN SỐ THỦ CÔNG</div>
+              <button onclick="closeUnreadPlateModal()"
+                style="background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;line-height:1">✕</button>
+            </div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+              <div id="unreadModalImgWrap"
+                style="background:#000;border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:220px">
+                <img id="unreadModalImg" src=""
+                  style="max-width:100%;max-height:60vh;object-fit:contain;display:block" />
+              </div>
+              <div id="unreadModalInfo"
+                style="color:var(--dim);font-family:Inter,sans-serif;font-size:13px;line-height:1.8"></div>
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:4px">🔠 NHẬP BIỂN SỐ CHÍNH XÁC</div>
+                <input type="text" id="unreadModalPlateInput" placeholder="VD: 29A-12345"
+                  style="width:100%;background:#0e141d;border:1px solid var(--warn);color:var(--text);padding:9px 10px;font-size:14.5px;border-radius:8px;box-sizing:border-box;font-family:Inter,sans-serif;letter-spacing:0.2px"
+                  onkeydown="if(event.key==='Enter') confirmUnreadPlate()">
+                <div id="unreadModalMsg" style="font-size:12.5px;color:var(--danger);min-height:14px;margin-top:4px"></div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn bp" onclick="confirmUnreadPlate()" style="flex:1;padding:10px;font-size:13px">✅
+                  XÁC NHẬN & ĐẨY RA BÁO CÁO</button>
+                <button class="btn" onclick="closeUnreadPlateModal()" style="padding:10px 14px;font-size:12.5px">Huỷ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL: lịch sử hoạt động của 1 tài khoản (tab QUẢN TRỊ) -->
+        <div id="userHistoryModal"
+          style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.85);align-items:center;justify-content:center">
+          <div
+            style="background:#131a24;border:1px solid var(--border);border-radius:12px;width:min(680px,95vw);max-height:85vh;overflow-y:auto;display:flex;flex-direction:column">
+            <div
+              style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border)">
+              <div style="font-family:Inter,sans-serif;font-size:13px;color:var(--accent);letter-spacing:0.3px"
+                id="userHistoryTitle">🕘 LỊCH SỬ HOẠT ĐỘNG</div>
+              <button onclick="closeUserHistory()"
+                style="background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;line-height:1">✕</button>
+            </div>
+            <div style="padding:14px 18px">
+              <div id="userHistoryBox" style="display:flex;flex-direction:column;gap:4px;max-height:60vh;overflow-y:auto;font-family:Inter,sans-serif;font-size:12.5px"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-admin">
+          <div style="padding:12px;display:flex;flex-direction:column;gap:18px">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-family:Inter,sans-serif;font-size:12px;color:var(--accent);letter-spacing:0.3px">👤 QUẢN
+                  LÝ NGƯỜI DÙNG</div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+                <input id="newUserUsername" placeholder="Tên đăng nhập"
+                  style="flex:1;min-width:100px;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:12.5px;border-radius:8px">
+                <input id="newUserFullname" placeholder="Họ tên"
+                  style="flex:1;min-width:100px;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:12.5px;border-radius:8px">
+                <input id="newUserPassword" type="password" placeholder="Mật khẩu"
+                  style="flex:1;min-width:100px;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:12.5px;border-radius:8px">
+                <select id="newUserRole"
+                  style="background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:12.5px;border-radius:8px">
+                  <option value="truc_camera">Cán bộ trực camera</option>
+                  <option value="xu_phat">Cán bộ xử phạt</option>
+                  <option value="lanh_dao">Lãnh đạo</option>
+                  <option value="admin">Quản trị viên</option>
+                </select>
+                <button class="btn bs" onclick="createUser()"
+                  style="padding:6px 12px;font-size:12px;white-space:nowrap">➕ TẠO TÀI KHOẢN</button>
+              </div>
+              <div id="userListBox" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto">
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-family:Inter,sans-serif;font-size:12px;color:var(--accent);letter-spacing:0.3px">📜 NHẬT
+                  KÝ THAO TÁC (AUDIT LOG)</div>
+                <button class="btn" onclick="loadAuditLog()" style="padding:5px 10px;font-size:11.5px">🔄 TẢI LẠI</button>
+              </div>
+              <div id="auditLogBox"
+                style="display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;font-family:Inter,sans-serif;font-size:12.5px">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-report">
+      <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--accent);letter-spacing:0.3px">📋 DANH SÁCH VI PHẠM</div>
+          <span id="filtResultCount" style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--dim)"></span>
+        </div>
+
+        <!-- KẾT QUẢ LỌC -->
+        <div id="filtResults" style="display:flex;flex-direction:column;gap:6px"></div>
+
+        <!-- PHÂN TRANG -->
+        <div id="filtPager" style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap"></div>
+
+      </div>
+    </div>
+
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right-col">
+      <div class="panel rightNormal">
+        <div class="ph"><span class="pt">🚨 Vi Phạm</span><span class="pb" id="viocnt">0 TH</span></div>
+        <div class="vl" id="vioList">
+          <div class="empty">[ CHƯA CÓ DỮ LIỆU ]</div>
+        </div>
+      </div>
+      <div class="panel rightNormal">
+        <div class="ph"><span class="pt">📋 System Log</span><span class="pb">REALTIME</span></div>
+        <div class="lb2" id="logBox">
+          <div class="le info">> Hệ thống khởi động...</div>
+          <div class="le ok">> API: http://127.0.0.1:8000</div>
+          <div class="le">> Chờ dữ liệu đầu vào...</div>
+        </div>
+      </div>
+
+      <!-- BÁO CÁO: thống kê + biểu đồ + bộ lọc (chỉ hiện khi ở tab Báo Cáo) -->
+      <div class="panel" id="reportSidebar" style="display:none">
+        <div class="ph"><span class="pt">📊 Thống Kê Báo Cáo</span></div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:10px">
+
+          <!-- STAT CARDS -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div
+              style="background:linear-gradient(135deg,rgba(79,178,255,0.15),rgba(79,178,255,0.05));border:1px solid rgba(79,178,255,0.4);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-family:Inter,sans-serif;font-size:20px;color:var(--accent);font-weight:700" id="stat_today">--
+              </div>
+              <div style="font-size:11.5px;color:var(--dim);margin-top:3px;letter-spacing:0.2px">HÔM NAY</div>
+            </div>
+            <div
+              style="background:linear-gradient(135deg,rgba(255,107,107,0.15),rgba(255,107,107,0.05));border:1px solid rgba(255,107,107,0.4);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-family:Inter,sans-serif;font-size:20px;color:var(--danger);font-weight:700" id="stat_hour">--
+              </div>
+              <div style="font-size:11.5px;color:var(--dim);margin-top:3px;letter-spacing:0.2px" id="stat_hour_label">GIỜ NÀY
+              </div>
+            </div>
+            <div
+              style="background:linear-gradient(135deg,rgba(255,170,0,0.15),rgba(255,170,0,0.05));border:1px solid rgba(255,170,0,0.4);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-family:Inter,sans-serif;font-size:20px;color:var(--warn);font-weight:700" id="stat_pending">
+                --</div>
+              <div style="font-size:11.5px;color:var(--dim);margin-top:3px;letter-spacing:0.2px">CHƯA XỬ PHẠT</div>
+            </div>
+            <div
+              style="background:linear-gradient(135deg,rgba(61,220,151,0.15),rgba(61,220,151,0.05));border:1px solid rgba(61,220,151,0.4);border-radius:10px;padding:10px;text-align:center">
+              <div style="font-family:Inter,sans-serif;font-size:20px;color:var(--accent2);font-weight:700" id="stat_done">--
+              </div>
+              <div style="font-size:11.5px;color:var(--dim);margin-top:3px;letter-spacing:0.2px">ĐÃ XỬ PHẠT</div>
+            </div>
+          </div>
+
+          <!-- BIỂU ĐỒ THEO GIỜ -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:10px">
+            <div
+              style="font-family:Inter,sans-serif;font-size:12px;color:var(--accent);letter-spacing:0.3px;margin-bottom:8px">
+              📈 VI PHẠM THEO GIỜ</div>
+            <div id="hourlyChart" style="display:flex;align-items:flex-end;gap:2px;height:60px;overflow-x:auto"></div>
+            <div style="display:flex;gap:2px;margin-top:3px" id="hourlyLabels"></div>
+          </div>
+
+          <!-- BỘ LỌC TRUY VẾT -->
+          <div style="border:1px solid var(--border);border-radius:10px;padding:10px">
+            <div
+              style="font-family:Inter,sans-serif;font-size:12px;color:var(--accent);letter-spacing:0.3px;margin-bottom:10px">
+              🔎 BỘ LỌC TRUY VẾT</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:3px">Từ ngày</div>
+                <input type="date" id="filt_from_date"
+                  style="width:100%;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:13px;border-radius:8px;box-sizing:border-box">
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:3px">Đến ngày</div>
+                <input type="date" id="filt_to_date"
+                  style="width:100%;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:13px;border-radius:8px;box-sizing:border-box">
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:3px">Từ giờ</div>
+                <input type="time" id="filt_from_time" value="00:00"
+                  style="width:100%;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:13px;border-radius:8px;box-sizing:border-box">
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:3px">Đến giờ</div>
+                <input type="time" id="filt_to_time" value="23:59"
+                  style="width:100%;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:13px;border-radius:8px;box-sizing:border-box">
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:3px">📍 Camera / Vị trí</div>
+                <select id="filt_cam"
+                  style="width:100%;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:13px;border-radius:8px;box-sizing:border-box">
+                  <option value="all">— Tất cả —</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:3px">🔠 Biển số (tuỳ chọn)</div>
+                <input type="text" id="filt_plate" placeholder="VD: 29A-12345"
+                  style="width:100%;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:13px;border-radius:8px;box-sizing:border-box;font-family:Inter,sans-serif">
+              </div>
+              <div>
+                <div style="font-size:12px;color:var(--dim);margin-bottom:3px">📋 Trạng thái</div>
+                <select id="filt_status"
+                  style="width:100%;background:#0e141d;border:1px solid var(--border);color:var(--text);padding:6px 8px;font-size:13px;border-radius:8px;box-sizing:border-box">
+                  <option value="all">— Tất cả —</option>
+                  <option value="Chưa xử phạt">Chưa xử phạt</option>
+                  <option value="Đã xử phạt">Đã xử phạt</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <button class="btn bp" onclick="runFilter(1)" style="padding:8px 16px;font-size:12.5px">🔍 TÌM KIẾM</button>
+              <button class="btn" onclick="clearFilter()" style="padding:8px 12px;font-size:12.5px">✕ XOÁ LỌC</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = 'http://127.0.0.1:8000';
+    const ICONS = { 'Ô tô': '🚗', 'Xe máy': '🏍️', 'Xe buýt': '🚌', 'Xe tải': '🚛', 'Khác': '🚙' };
+    const COLS = { 'Ô tô': '#00d4ff', 'Xe máy': '#00ff88', 'Xe buýt': '#ffaa00', 'Xe tải': '#ff6b35', 'Khác': '#fff' };
+
+    // ── AUTH (đăng nhập / phiên làm việc / phân quyền) ──────────────────────────
+    let authToken = localStorage.getItem('tv_token') || null;
+    let currentUser = null; // {username, full_name, role, role_label}
+
+    // Gọi API có gắn sẵn Bearer token. Nếu 401 (hết phiên) -> tự đăng xuất về màn login.
+    async function apiFetch(url, opts = {}) {
+      if (!authToken) throw new Error('Chưa đăng nhập');
+      opts.headers = { ...(opts.headers || {}), 'Authorization': 'Bearer ' + authToken };
+      let res;
+      try {
+        res = await fetch(url, opts);
+      } catch (netErr) {
+        throw new Error('Không kết nối được server: ' + netErr.message);
+      }
+      if (res.status === 401) {
+        doLogout(true);
+        throw new Error('Phiên đăng nhập đã hết hạn');
+      }
+      if (!res.ok) {
+        let detail = '';
+        try { const d = await res.clone().json(); detail = d.detail || ''; } catch (e) { }
+        throw new Error(`Lỗi server ${res.status}${detail ? ' — ' + detail : ''}`);
+      }
+      return res;
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('loginUser').value.trim();
+      const p = document.getElementById('loginPass').value;
+      const errBox = document.getElementById('loginError');
+      errBox.textContent = '';
+      if (!u || !p) { errBox.textContent = 'Vui lòng nhập đủ tài khoản và mật khẩu'; return; }
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({ detail: 'Đăng nhập thất bại' }));
+          errBox.textContent = d.detail || 'Sai tài khoản hoặc mật khẩu';
+          return;
+        }
+        const data = await res.json();
+        authToken = data.token;
+        localStorage.setItem('tv_token', authToken);
+        currentUser = data;
+        applyAuthUI();
+      } catch (e) {
+        errBox.textContent = 'Lỗi kết nối server: ' + e.message;
+      }
+    }
+
+    async function doLogout(silent) {
+      try { if (authToken) await fetch(`${API}/auth/logout`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + authToken } }); } catch (e) { }
+      authToken = null; currentUser = null;
+      localStorage.removeItem('tv_token');
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('userBadge').style.display = 'none';
+      document.getElementById('btnLogout').style.display = 'none';
+      document.getElementById('loginPass').value = '';
+      if (!silent) document.getElementById('loginError').textContent = '';
+      else document.getElementById('loginError').textContent = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại';
+    }
+
+    // Hiện/ẩn các tab và nút thao tác theo vai trò đăng nhập
+    function applyAuthUI() {
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('userBadge').style.display = 'block';
+      document.getElementById('userBadgeName').textContent = '👤 ' + currentUser.full_name;
+      document.getElementById('userBadgeRole').textContent = currentUser.role_label;
+      document.getElementById('btnLogout').style.display = 'inline-block';
+      document.getElementById('tabBtnAdmin').style.display = (currentUser.role === 'admin') ? 'inline-block' : 'none';
+
+      // lãnh đạo: chỉ xem, không được vào tab tạo vi phạm/camera (ẩn các tab thao tác)
+      const tabsBar = document.querySelector('.tabs');
+      const tabButtons = tabsBar.querySelectorAll('.tab');
+      const restrictedForLanhDao = ['violation', 'video', 'grid']; // các tab tạo/sửa dữ liệu
+      tabButtons.forEach(btn => {
+        const onclick = btn.getAttribute('onclick') || '';
+        const m = onclick.match(/switchTab\('(\w+)'\)/);
+        if (!m) return;
+        const tabName = m[1];
+        if (currentUser.role === 'lanh_dao' && restrictedForLanhDao.includes(tabName)) {
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = '';
+        }
+      });
+      // nếu đang đứng ở tab bị ẩn, chuyển về tab Tra cứu
+      if (currentUser.role === 'lanh_dao') switchTab('lookup'); else switchTab('violation');
+
+      log(`Đăng nhập: ${currentUser.full_name} (${currentUser.role_label})`, 'ok');
+    }
+
+    // Khôi phục phiên nếu đã có token lưu sẵn (đỡ phải đăng nhập lại khi tải lại trang)
+    async function tryRestoreSession() {
+      if (!authToken) return;
+      try {
+        const res = await fetch(`${API}/auth/me`, { headers: { 'Authorization': 'Bearer ' + authToken } });
+        if (!res.ok) throw new Error('expired');
+        currentUser = await res.json();
+        applyAuthUI();
+      } catch (e) {
+        authToken = null; localStorage.removeItem('tv_token');
+      }
+    }
+
+    // Hiển thị biển số: nếu chưa đọc được thì cảnh báo màu vàng thay vì in thẳng "KHO_DOC_BIEN"
+    function plateLabelHtml(plateText) {
+      if (!plateText || plateText === 'KHO_DOC_BIEN' || plateText === '???') {
+        return '<span style="color:var(--warn)">⚠️ CHƯA ĐỌC ĐƯỢC BIỂN</span>';
+      }
+      return plateText;
+    }
+    // Ảnh minh chứng thu nhỏ (nếu backend trả về evidence_path)
+    function evidenceThumbHtml(path) {
+      if (!path) return '';
+      return `<div style="margin-top:6px"><img src="${API}${path}" alt="Ảnh minh chứng" style="max-width:140px;max-height:90px;border:1px solid var(--border);border-radius:8px;object-fit:cover" onerror="this.parentElement.style.display='none'"></div>`;
+    }
+
+    // ── Panel "🚨 Vi Phạm" real-time cho Giám sát đa cam ────────────────────────
+    // Trước đây panel này chỉ được đổ dữ liệu từ tab Ảnh/Video, KHÔNG hề nhận vi phạm
+    // từ Giám sát đa cam (live) — nên trong lúc giám sát, panel đứng yên dù vi phạm vẫn
+    // đang xảy ra. 2 hàm dưới đây nối trực tiếp Giám sát đa cam vào panel này:
+    // - addLiveVioEntry: thêm dòng mới NGAY khi phát hiện vi phạm (biển số hiện "chưa đọc được"
+    //   vì OCR đang chạy nền, chưa xong).
+    // - updateLiveVioEntry: khi OCR nền đọc xong (phát hiện ở lần poll sau), tự động cập nhật
+    //   LẠI đúng dòng đó với biển số thật + ảnh bằng chứng, không tạo dòng trùng lặp.
+    function addLiveVioEntry(camName, vio) {
+      const box = document.getElementById('vioList');
+      const empty = box.querySelector('.empty'); if (empty) empty.remove();
+      const el = document.createElement('div');
+      el.className = 'vi2';
+      el.id = `vio-live-${vio.cam_id}-${vio.track_id}`;
+      el.innerHTML = `<div class="vh">⚠️ ${camName} — ${vio.time_str}</div>
+    <div class="vp" data-plate-slot>${plateLabelHtml(vio.plate_text)}</div>
+    <div class="vt">🚗 ${vio.vehicle_type} | VƯỢT ĐÈN ĐỎ</div>
+    <div data-evidence-slot></div>`;
+      box.insertBefore(el, box.firstChild);
+      document.getElementById('viocnt').textContent = `${box.querySelectorAll('.vi2').length} TH`;
+      document.getElementById('hVio').textContent = +document.getElementById('hVio').textContent + 1;
+    }
+    function updateLiveVioEntry(camId, trackId, plateText, evidencePath) {
+      const el = document.getElementById(`vio-live-${camId}-${trackId}`);
+      if (!el) return;
+      const plateSlot = el.querySelector('[data-plate-slot]');
+      if (plateSlot) plateSlot.innerHTML = plateLabelHtml(plateText);
+      const evSlot = el.querySelector('[data-evidence-slot]');
+      if (evSlot && evidencePath) evSlot.innerHTML = evidenceThumbHtml(evidencePath);
+    }
+
+    // State
+    let img2 = null, vid3 = null;
+    let drawMode = 'roi', lightStatus2 = null, lightStatus3 = 'RED';
+    let roiPts2 = [], linePts2 = [], imgObj2 = null;
+    let vidOutB64 = null;
+
+    // ── Helper vẽ ROI (tứ giác 4 điểm) và vạch dừng (đường 2 điểm) ──
+    function drawRoiPoints(ctx, pts, color = '#00ffff') {
+      if (!pts.length) return;
+      ctx.lineWidth = 2; ctx.strokeStyle = color;
+      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      if (pts.length === 4) ctx.closePath();
+      ctx.stroke();
+      if (pts.length === 4) { ctx.fillStyle = 'rgba(0,255,255,0.08)'; ctx.fill(); }
+      pts.forEach((p, i) => {
+        ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 9px Inter'; ctx.fillText(String(i + 1), p[0] - 3, p[1] + 3);
+      });
+      if (pts.length === 4) { ctx.fillStyle = color; ctx.font = 'bold 12px Inter'; ctx.fillText('ROI', pts[0][0] + 5, pts[0][1] + 15); }
+    }
+
+    function drawLinePoints(ctx, pts, color = '#ff3a3a') {
+      if (!pts.length) return;
+      pts.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); });
+      if (pts.length === 2) {
+        ctx.strokeStyle = color; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke();
+        ctx.fillStyle = color; ctx.font = 'bold 11px Inter'; ctx.fillText('STOP LINE', pts[0][0] + 5, pts[0][1] - 8);
+      }
+    }
+
+    // ── INIT ──
+    document.addEventListener('DOMContentLoaded', () => { renderSchedule(); tryRestoreSession(); });
+
+    // ── TABS ──
+    function switchTab(n) {
+      const names = ['violation', 'video', 'lookup', 'unread', 'grid', 'admin', 'report'];
+      names.forEach((name, i) => {
+        document.querySelectorAll('.tab')[i].classList.toggle('active', name === n);
+        document.getElementById('tab-' + name).classList.toggle('active', name === n);
+      });
+      if (n === 'lookup') document.getElementById('feedStatus').textContent = 'TRA CỨU MODE';
+      if (n === 'unread') { document.getElementById('feedStatus').textContent = 'CẦN TRA THỦ CÔNG'; loadUnreadPlates(); }
+      if (n === 'grid') { document.getElementById('feedStatus').textContent = 'GIÁM SÁT ĐA CAM'; loadSavedCameras(); }
+      if (n === 'admin') { document.getElementById('feedStatus').textContent = 'QUẢN TRỊ HỆ THỐNG'; loadUserList(); loadAuditLog(); }
+      if (n === 'report') { document.getElementById('feedStatus').textContent = 'BÁO CÁO & TRUY VẾT'; loadReportStats(); }
+
+      // Ở tab Báo Cáo / Quản Trị: ẩn "Vi Phạm" + "System Log" (không cần thiết ở các tab này)
+      document.querySelectorAll('.rightNormal').forEach(el => el.style.display = (n === 'report' || n === 'admin') ? 'none' : '');
+      document.getElementById('reportSidebar').style.display = (n === 'report') ? '' : 'none';
+    }
+
+    // ── LOG ──
+    function log(msg, type = '') {
+      const b = document.getElementById('logBox');
+      const d = document.createElement('div');
+      d.className = `le ${type}`;
+      d.textContent = `[${new Date().toLocaleTimeString('vi-VN')}] > ${msg}`;
+      b.appendChild(d); b.scrollTop = b.scrollHeight;
+    }
+
+    function setLoad(id, on) {
+      document.getElementById(id).classList.toggle('active', on);
+      document.getElementById('feedStatus').textContent = on ? 'ĐANG QUÉT...' : 'XONG';
+    }
+
+    // ── TAB 2 VIOLATION ──
+    const uz2 = document.getElementById('uz2'), fi2 = document.getElementById('fi2');
+    uz2.onclick = () => fi2.click();
+    uz2.ondragover = e => { e.preventDefault(); uz2.classList.add('drag') };
+    uz2.ondragleave = () => uz2.classList.remove('drag');
+    uz2.ondrop = e => { e.preventDefault(); uz2.classList.remove('drag'); if (e.dataTransfer.files[0]) loadImg2(e.dataTransfer.files[0]) };
+    fi2.onchange = e => { if (e.target.files[0]) loadImg2(e.target.files[0]) };
+
+    function loadImg2(file) {
+      img2 = file;
+      const r = new FileReader();
+      r.onload = e => {
+        imgObj2 = new Image();
+        imgObj2.onload = () => {
+          const c = document.getElementById('c2');
+          c.width = imgObj2.width; c.height = imgObj2.height;
+          c.getContext('2d').drawImage(imgObj2, 0, 0);
+          uz2.style.display = 'none'; c.style.display = 'block';
+          document.querySelector('#cw2 .cph').style.display = 'none';
+          document.getElementById('btnVio2').disabled = false;
+          log(`Tải ảnh vi phạm: ${file.name}`, 'ok');
+          setupCanvas2();
+        };
+        imgObj2.src = e.target.result;
+      };
+      r.readAsDataURL(file);
+    }
+
+    function setupCanvas2() {
+      const c = document.getElementById('c2');
+      c.onmousedown = null; c.onmousemove = null; c.onmouseup = null;
+      c.onclick = e => {
+        const rect = c.getBoundingClientRect();
+        const sx = c.width / rect.width, sy = c.height / rect.height;
+        const x = Math.round((e.clientX - rect.left) * sx), y = Math.round((e.clientY - rect.top) * sy);
+        if (drawMode === 'roi') {
+          if (roiPts2.length < 4) { roiPts2.push([x, y]); log(`ROI: điểm ${roiPts2.length}/4`, roiPts2.length === 4 ? 'ok' : 'info'); }
+        } else {
+          if (linePts2.length < 2) { linePts2.push([x, y]); log(`Vạch dừng: điểm ${linePts2.length}/2`, linePts2.length === 2 ? 'ok' : 'info'); }
+        }
+        redraw2();
+      };
+    }
+
+    function redraw2() {
+      if (!imgObj2) return;
+      const c = document.getElementById('c2'), ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height); ctx.drawImage(imgObj2, 0, 0);
+      drawRoiPoints(ctx, roiPts2);
+      drawLinePoints(ctx, linePts2);
+      const lc = lightStatus2 === 'RED' ? '#ff3a3a' : lightStatus2 === 'GREEN' ? '#00ff88' : '#333';
+      ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(8, 8, 155, 42);
+      ctx.fillStyle = lc; ctx.beginPath(); ctx.arc(30, 29, 12, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Inter';
+      ctx.fillText(lightStatus2 ? `ĐÈN ${lightStatus2}` : 'CHƯA CHỌN', 48, 34);
+    }
+
+    function setMode(m) {
+      drawMode = m;
+      if (m === 'roi') { roiPts2 = []; log('Click 4 điểm để vẽ ROI (theo góc đường)', 'info'); }
+      else { linePts2 = []; log('Click 2 điểm để vẽ vạch dừng (theo góc nghiêng)', 'info'); }
+      document.getElementById('bROI').classList.toggle('active', m === 'roi');
+      document.getElementById('bLine').classList.toggle('active', m === 'line');
+      redraw2();
+    }
+
+    function setLight(s) {
+      lightStatus2 = s;
+      const c = document.getElementById('lc2'), l = document.getElementById('ll2');
+      if (s === 'RED') {
+        c.className = 'lc red'; l.style.color = 'var(--danger)'; l.textContent = 'ĐÈN ĐỎ — XE KHÔNG ĐƯỢC QUA';
+        document.getElementById('bRed').classList.add('active'); document.getElementById('bGreen').classList.remove('active');
+      } else {
+        c.className = 'lc green'; l.style.color = 'var(--accent2)'; l.textContent = 'ĐÈN XANH — XE ĐƯỢC PHÉP QUA';
+        document.getElementById('bGreen').classList.add('active'); document.getElementById('bRed').classList.remove('active');
+      }
+      redraw2(); log(`Đèn: ${s}`, s === 'RED' ? 'warn' : 'ok');
+    }
+
+    function clearDraw() { roiPts2 = []; linePts2 = []; redraw2(); }
+
+    function clearT2() {
+      img2 = null; imgObj2 = null; roiPts2 = []; linePts2 = []; lightStatus2 = null;
+      const c = document.getElementById('c2');
+      c.getContext('2d').clearRect(0, 0, c.width, c.height); c.style.display = 'none';
+      uz2.style.display = 'block'; document.querySelector('#cw2 .cph').style.display = 'flex';
+      document.getElementById('btnVio2').disabled = true;
+      document.getElementById('lc2').className = 'lc';
+      document.getElementById('ll2').textContent = 'CHƯA CHỌN ĐÈN'; document.getElementById('ll2').style.color = 'var(--dim)';
+      document.getElementById('bRed').classList.remove('active'); document.getElementById('bGreen').classList.remove('active');
+      document.getElementById('vioList').innerHTML = '<div class="empty">[ CHƯA CÓ DỮ LIỆU ]</div>';
+      document.getElementById('viocnt').textContent = '0 TH';
+      fi2.value = '';
+    }
+
+    async function checkViolation() {
+      if (!img2) return;
+      if (!lightStatus2) { log('Vui lòng chọn trạng thái đèn!', 'warn'); return; }
+      setLoad('lb2', true); log('Đang kiểm tra vi phạm...', 'info');
+      try {
+        const fd = new FormData();
+        fd.append('file', img2);
+        fd.append('roi_points', JSON.stringify(roiPts2));
+        fd.append('line_points', JSON.stringify(linePts2));
+        fd.append('light_status', lightStatus2);
+        const res = await apiFetch(`${API}/check-violation`, { method: 'POST', body: fd });
+        const data = await res.json();
+        const violations = data.violations || [], allV = data.all_vehicles || [];
+        const im = new Image();
+        im.onload = () => {
+          const c = document.getElementById('c2'), ctx = c.getContext('2d');
+          ctx.drawImage(im, 0, 0);
+          drawRoiPoints(ctx, roiPts2);
+          drawLinePoints(ctx, linePts2);
+          allV.forEach(v => {
+            const [x1, y1, x2, y2] = v.bbox;
+            const isV = violations.some(vio => vio.bbox[0] === x1 && vio.bbox[1] === y1);
+            ctx.strokeStyle = isV ? '#ff3a3a' : '#00ff88'; ctx.lineWidth = 2; ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            if (isV) { ctx.fillStyle = 'rgba(255,107,107,0.12)'; ctx.fillRect(x1, y1, x2 - x1, y2 - y1); ctx.fillStyle = '#ff3a3a'; ctx.font = 'bold 12px Inter'; ctx.fillText('VI PHẠM!', x1 + 3, y1 - 6); }
+          });
+          const lc = lightStatus2 === 'RED' ? '#ff3a3a' : '#00ff88';
+          ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(8, 8, 155, 42);
+          ctx.fillStyle = lc; ctx.beginPath(); ctx.arc(30, 29, 12, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Inter'; ctx.fillText(`ĐÈN ${lightStatus2}`, 48, 34);
+        };
+        im.src = URL.createObjectURL(img2);
+        const now = new Date().toLocaleTimeString('vi-VN');
+        document.getElementById('vioList').innerHTML = violations.length === 0
+          ? `<div class="empty">✅ KHÔNG VI PHẠM<br><span style="font-size:12px;color:var(--dim)">${allV.length} xe phát hiện</span></div>`
+          : violations.map((v, i) => `<div class="vi2"><div class="vh">⚠️ HỒ SƠ VI PHẠM #${String(i + 1).padStart(3, '0')}</div><div class="vp">${plateLabelHtml(v.plate_text)}</div><div class="vt">⏰ ${now} | 🚗 ${v.vehicle_type} | ${(v.confidence * 100).toFixed(0)}%</div>${evidenceThumbHtml(v.evidence_path)}</div>`).join('');
+        document.getElementById('viocnt').textContent = `${violations.length} TH`;
+        document.getElementById('hVio').textContent = +document.getElementById('hVio').textContent + violations.length;
+        document.getElementById('hS').textContent = +document.getElementById('hS').textContent + 1;
+        log(violations.length === 0 ? `✅ Không vi phạm. ${allV.length} xe` : `⚠️ ${violations.length} vi phạm!`, violations.length === 0 ? 'ok' : 'warn');
+      } catch (e) { log(`Lỗi: ${e.message}`, 'err'); }
+      setLoad('lb2', false);
+    }
+
+    // ── TAB 3 VIDEO ──
+    const uz3 = document.getElementById('uz3'), fi3 = document.getElementById('fi3');
+    uz3.onclick = () => fi3.click();
+    uz3.ondragover = e => { e.preventDefault(); uz3.classList.add('drag') };
+    uz3.ondragleave = () => uz3.classList.remove('drag');
+    uz3.ondrop = e => { e.preventDefault(); uz3.classList.remove('drag'); if (e.dataTransfer.files[0]) loadVid(e.dataTransfer.files[0]) };
+    fi3.onchange = e => { if (e.target.files[0]) loadVid(e.target.files[0]) };
+
+    // State cho vẽ ROI/vạch dừng video
+    let roiPtsVid = [], linePtsVid = [], drawModeVid = 'roi', vidFrameData = null;
+
+    function loadVid(file) {
+      vid3 = file;
+      const v = document.getElementById('vidIn');
+      v.src = URL.createObjectURL(file);
+      v.style.display = 'block';
+      uz3.style.display = 'none';
+      document.querySelector('#vw3 .vph').style.display = 'none';
+      document.getElementById('btnProc').disabled = false;
+      roiPtsVid = []; linePtsVid = []; vidFrameData = null;
+      log(`Tải video: ${file.name}`, 'ok');
+
+      v.onloadeddata = () => {
+        if (v.videoWidth > 0) {
+          try { v.currentTime = Math.min(0.1, v.duration / 2 || 0.1); }
+          catch (e) { captureVidFrame(v); }
+        }
+      };
+      v.onseeked = () => {
+        captureVidFrame(v);
+        v.onseeked = null;
+      };
+    }
+
+    function captureVidFrame(v) {
+      const c = document.getElementById('cVid');
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      vidFrameData = ctx.getImageData(0, 0, c.width, c.height);
+      c.style.display = 'block';
+      document.getElementById('cwVid').style.display = 'flex';
+      document.getElementById('dcVid').style.display = 'flex';
+      document.getElementById('vidFrameHint').style.display = 'block';
+      setupCanvasVid();
+      log('Đã chụp frame đầu — vẽ ROI/vạch dừng nếu cần', 'info');
+    }
+
+    function setupCanvasVid() {
+      const c = document.getElementById('cVid');
+      c.onmousedown = null; c.onmousemove = null; c.onmouseup = null;
+      c.onclick = e => {
+        const rect = c.getBoundingClientRect();
+        const sx = c.width / rect.width, sy = c.height / rect.height;
+        const x = Math.round((e.clientX - rect.left) * sx), y = Math.round((e.clientY - rect.top) * sy);
+        if (drawModeVid === 'roi') {
+          if (roiPtsVid.length < 4) { roiPtsVid.push([x, y]); log(`ROI: điểm ${roiPtsVid.length}/4`, roiPtsVid.length === 4 ? 'ok' : 'info'); }
+        } else {
+          if (linePtsVid.length < 2) { linePtsVid.push([x, y]); log(`Vạch dừng: điểm ${linePtsVid.length}/2`, linePtsVid.length === 2 ? 'ok' : 'info'); }
+        }
+        redrawVid();
+      };
+    }
+
+    function redrawVid() {
+      if (!vidFrameData) return;
+      const c = document.getElementById('cVid'), ctx = c.getContext('2d');
+      ctx.putImageData(vidFrameData, 0, 0);
+      drawRoiPoints(ctx, roiPtsVid);
+      drawLinePoints(ctx, linePtsVid);
+    }
+
+    function setModeVid(m) {
+      drawModeVid = m;
+      if (m === 'roi') { roiPtsVid = []; log('Click 4 điểm để vẽ ROI (theo góc đường)', 'info'); }
+      else { linePtsVid = []; log('Click 2 điểm để vẽ vạch dừng (theo góc nghiêng)', 'info'); }
+      document.getElementById('bROIVid').classList.toggle('active', m === 'roi');
+      document.getElementById('bLineVid').classList.toggle('active', m === 'line');
+      redrawVid();
+    }
+
+    function clearDrawVid() {
+      roiPtsVid = []; linePtsVid = []; redrawVid();
+    }
+
+    let lightSchedule3 = [];
+
+    function addSchedule(light) {
+      const from = parseFloat(document.getElementById('schFrom').value);
+      const to = parseFloat(document.getElementById('schTo').value);
+      if (isNaN(from) || isNaN(to) || from >= to) { log('Nhập giây hợp lệ (từ < đến)', 'warn'); return; }
+      // Kiểm tra overlap
+      for (const s of lightSchedule3) {
+        if (from < s.to && to > s.from) { log('Khoảng giây bị trùng với lịch đã có!', 'warn'); return; }
+      }
+      lightSchedule3.push({ from, to, light });
+      lightSchedule3.sort((a, b) => a.from - b.from);
+      renderSchedule();
+      document.getElementById('schFrom').value = '';
+      document.getElementById('schTo').value = '';
+      log(from + 's→' + to + 's: ĐÈN ' + light, 'ok');
+    }
+
+    function renderSchedule() {
+      const el = document.getElementById('scheduleList');
+      if (!el) return;
+      if (!lightSchedule3.length) {
+        el.innerHTML = '<div style="font-family:Inter,sans-serif;font-size:12px;color:var(--dim)">> Chưa có lịch</div>';
+        return;
+      }
+      el.innerHTML = lightSchedule3.map((s, i) =>
+        `<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-left:3px solid ${s.light === 'RED' ? 'var(--danger)' : 'var(--accent2)'};background:rgba(0,0,0,0.3)">
+      <span style="font-family:Inter,sans-serif;font-size:12px;color:${s.light === 'RED' ? 'var(--danger)' : 'var(--accent2)'}">
+        ${s.light === 'RED' ? '&#128308;' : '&#128994;'} ${s.from}s &#8594; ${s.to}s
+      </span>
+      <button onclick="removeSchedule(${i})" style="margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:13.5px;padding:0 2px">&#10005;</button>
+    </div>`
+      ).join('');
+    }
+
+    function removeSchedule(i) { lightSchedule3.splice(i, 1); renderSchedule(); }
+    function clearSchedule() { lightSchedule3 = []; renderSchedule(); }
+    function setLight3(s) { }
+
+    let _currentJobId = null;
+    let _pollInterval = null;
+
+    async function processVideo() {
+      if (!vid3) return;
+      if (linePtsVid.length < 2) log('⚠️ Chưa vẽ đủ vạch dừng (2 điểm) — sẽ không phát hiện vi phạm', 'warn');
+      setLoad('lb3', true);
+      document.getElementById('btnProc').disabled = true;
+      document.getElementById('progWrap').classList.add('show');
+      setProgress(5, 'Đang upload video lên server...');
+      log('Đang gửi video vào hàng đợi xử lý...', 'info');
+
+      try {
+        const fd = new FormData();
+        fd.append('file', vid3);
+        fd.append('light_schedule', JSON.stringify(lightSchedule3));
+        fd.append('roi_points', JSON.stringify(roiPtsVid));
+        fd.append('line_points', JSON.stringify(linePtsVid));
+        const cVidEl = document.getElementById('cVid');
+        fd.append('frame_w', cVidEl.width || 0);
+        fd.append('frame_h', cVidEl.height || 0);
+
+        // Gửi video → nhận job_id ngay (<1s), không chờ xử lý xong
+        const res = await apiFetch(`${API}/process-video`, { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.error) { log(`Lỗi: ${data.error}`, 'err'); resetVideoUI(); return; }
+
+        _currentJobId = data.job_id;
+        setProgress(8, 'Video đã vào hàng đợi — đang xử lý nền...');
+        log(`Job ${data.job_id} đã được tạo. Đang chờ kết quả...`, 'ok');
+
+        // Polling trạng thái job mỗi 1.5s
+        _pollInterval = setInterval(() => pollJobStatus(_currentJobId), 1500);
+
+      } catch (e) {
+        log(`Lỗi: ${e.message}`, 'err');
+        resetVideoUI();
+      }
+    }
+
+    function setProgress(pct, msg) {
+      document.getElementById('progFill').style.width = pct + '%';
+      document.getElementById('progText').textContent = msg;
+    }
+
+    async function pollJobStatus(jobId) {
+      if (jobId !== _currentJobId) return; // người dùng đã huỷ/đổi video
+      try {
+        const res = await apiFetch(`${API}/jobs/${jobId}`);
+        const job = await res.json();
+
+        setProgress(job.progress || 0, job.message || 'Đang xử lý...');
+
+        if (job.status === 'done') {
+          clearInterval(_pollInterval); _pollInterval = null;
+          const d = job.result;
+          setProgress(100, `✅ Hoàn tất! ${d.total_frames} frames | ${d.total_violations} vi phạm`);
+
+          // Hiện video kết quả ngay trên màn hình (không cần tải về)
+          vidOutB64 = d.video_b64;
+          const vidOut = document.getElementById('vidOut');
+          vidOut.src = `data:video/mp4;base64,${d.video_b64}`;
+          document.getElementById('vidOutWrap').style.display = 'block';
+
+          // Hiện danh sách vi phạm
+          const logs = d.violation_logs || [];
+          if (logs.length > 0) {
+            document.getElementById('vioList').innerHTML = logs.map((v, i) =>
+              `<div class="vi2">
+            <div class="vh">⚠️ VI PHẠM #${String(i + 1).padStart(3, '0')} — ${v.time_s}s</div>
+            <div class="vp">${plateLabelHtml(v.plate_text)}</div>
+            <div class="vt">🚗 ${v.vehicle_type} | Frame ${v.frame}${v.track_id != null ? ' | Track #' + v.track_id : ''}</div>
+            ${evidenceThumbHtml(v.evidence_path)}
+          </div>`).join('');
+            document.getElementById('viocnt').textContent = `${logs.length} TH`;
+            document.getElementById('hVio').textContent = +document.getElementById('hVio').textContent + logs.length;
+          }
+          log(`✅ Job ${jobId} hoàn tất — ${d.total_frames} frames, ${d.total_violations} vi phạm`, 'ok');
+          resetVideoUI(false); // false = không xoá progress bar
+
+        } else if (job.status === 'error') {
+          clearInterval(_pollInterval); _pollInterval = null;
+          log(`❌ Lỗi xử lý video: ${job.error}`, 'err');
+          setProgress(0, `❌ Lỗi: ${job.error}`);
+          resetVideoUI();
+        }
+        // nếu 'processing' thì tiếp tục đợi
+      } catch (e) {
+        // lỗi mạng tạm thời, không huỷ polling
+        log(`Lỗi polling job: ${e.message}`, 'warn');
+      }
+    }
+
+    function resetVideoUI(clearProgress = true) {
+      setLoad('lb3', false);
+      document.getElementById('btnProc').disabled = false;
+      if (clearProgress) {
+        setTimeout(() => document.getElementById('progWrap').classList.remove('show'), 1500);
+      }
+    }
+
+
+    function downloadVideo() {
+      if (!vidOutB64) return;
+      const a = document.createElement('a');
+      a.href = `data:video/mp4;base64,${vidOutB64}`;
+      a.download = 'output_traffic.mp4';
+      a.click();
+    }
+
+    function clearT3() {
+      vid3 = null; vidOutB64 = null;
+      if (_pollInterval) { clearInterval(_pollInterval); _pollInterval = null; }
+      _currentJobId = null;
+      document.getElementById('vidIn').src = ''; document.getElementById('vidIn').style.display = 'none';
+      document.getElementById('vidOut').src = ''; document.getElementById('vidOutWrap').style.display = 'none';
+      uz3.style.display = 'block'; document.querySelector('#vw3 .vph').style.display = 'flex';
+      document.getElementById('btnProc').disabled = true;
+      document.getElementById('progWrap').classList.remove('show');
+      document.getElementById('progFill').style.width = '0%';
+      fi3.value = '';
+      const c = document.getElementById('cVid');
+      c.getContext('2d').clearRect(0, 0, c.width, c.height);
+      document.getElementById('cwVid').style.display = 'none';
+      document.getElementById('dcVid').style.display = 'none';
+      document.getElementById('vidFrameHint').style.display = 'none';
+      roiPtsVid = []; linePtsVid = []; vidFrameData = null;
+    }
+
+    // ── LOOKUP ──────────────────────────────────────────────────────────────────
+    async function lookupPlate() {
+      const input = document.getElementById('lookupInput').value.trim();
+      if (!input) { log('Nhập biển số để tra cứu!', 'warn'); return; }
+      const status = document.getElementById('lookupStatus');
+      const summary = document.getElementById('lookupSummary');
+      const results = document.getElementById('lookupResults');
+      status.textContent = '> Đang tra cứu ' + input + '...';
+      results.innerHTML = '';
+      summary.style.display = 'none';
+      try {
+        const res = await fetch(`${API}/lookup-plate?bien_so=${encodeURIComponent(input)}`);
+        const data = await res.json();
+        document.getElementById('lkTotal').textContent = data.total;
+        document.getElementById('lkChua').textContent = data.chua_xu_phat;
+        document.getElementById('lkDa').textContent = data.da_xu_phat;
+        summary.style.display = 'block';
+        if (data.total === 0) {
+          status.textContent = '> Không tìm thấy vi phạm cho biển số: ' + data.bien_so;
+          results.innerHTML = '<div style="font-family:Inter,sans-serif;font-size:13px;color:var(--dim);padding:16px;text-align:center">✅ Không có vi phạm chưa xử lý</div>';
+          log('Tra cứu ' + input + ': Không có vi phạm', 'ok');
+          return;
+        }
+        status.textContent = '> Tìm thấy ' + data.total + ' vi phạm cho biển số: ' + data.bien_so;
+        log('Tra cứu ' + input + ': ' + data.total + ' vi phạm', data.chua_xu_phat > 0 ? 'warn' : 'ok');
+        data.violations.forEach((v, i) => {
+          const isPending = v.trang_thai === 'Chưa xử phạt';
+          const card = document.createElement('div');
+          card.style.cssText = `border:1px solid ${isPending ? 'var(--danger)' : 'rgba(61,220,151,0.35)'};border-left:3px solid ${isPending ? 'var(--danger)' : 'var(--accent2)'};background:rgba(0,0,0,0.3);padding:10px 12px;font-family:Inter,sans-serif;font-size:13px`;
+          const donViGQ = Array.isArray(v.don_vi_giai_quyet) && v.don_vi_giai_quyet.length > 0
+            ? v.don_vi_giai_quyet[0] : { ten: v.don_vi_phat_hien, dia_chi: '' };
+          var pendingBlock = '';
+          if (isPending) {
+            pendingBlock = '<div style="margin-top:6px;padding:6px;background:rgba(255,107,107,0.1);border:1px solid var(--danger)">'
+              + '<div style="color:var(--danger);font-weight:bold;margin-bottom:3px">📌 ĐẾN GIẢI QUYẾT TẠI:</div>'
+              + '<div style="color:var(--text)">' + donViGQ.ten + '</div>'
+              + '<div style="color:var(--dim)">' + donViGQ.dia_chi + '</div>'
+              + '</div>';
+          }
+          card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+            + '<span style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--accent)">HỒ SƠ #' + String(i + 1).padStart(3, '0') + '</span>'
+            + '<span style="padding:2px 8px;font-size:12px;font-family:Inter,sans-serif;background:' + (isPending ? 'rgba(255,107,107,0.2)' : 'rgba(61,220,151,0.2)') + ';color:' + (isPending ? 'var(--danger)' : 'var(--accent2)') + ';border:1px solid ' + (isPending ? 'var(--danger)' : 'var(--accent2)') + '">'
+            + v.trang_thai.toUpperCase() + '</span></div>'
+            + '<div style="color:var(--dim);line-height:1.8">'
+            + '<div>⏰ <span style="color:var(--text)">' + v.thoi_gian_vi_pham + '</span></div>'
+            + '<div>📍 <span style="color:var(--text)">' + v.dia_diem_vi_pham + '</span></div>'
+            + '<div>🚗 <span style="color:var(--text)">' + v.loai_phuong_tien + '</span></div>'
+            + '<div>⚠️ <span style="color:' + (isPending ? 'var(--warn)' : 'var(--dim)') + ';' + (isPending ? 'font-weight:bold' : '') + '">' + v.hanh_vi_vi_pham + '</span></div>'
+            + '<div>💰 Mức phạt: <span style="color:' + (isPending ? 'var(--danger)' : 'var(--text)') + ';' + (isPending ? 'font-weight:bold' : '') + '">' + v.muc_phat + '</span></div>'
+            + '<div>🏛️ Đơn vị PH: <span style="color:var(--text)">' + v.don_vi_phat_hien + '</span></div>'
+            + pendingBlock
+            + '</div>';
+          results.appendChild(card);
+        });
+      } catch (e) {
+        status.textContent = '> Lỗi kết nối: ' + e.message;
+        log('Lỗi tra cứu: ' + e.message, 'warn');
+      }
+    }
+
+    // ── CHƯA RÕ BIỂN (cần tra thủ công) ───────────────────────────────────────
+    async function loadUnreadPlates() {
+      const status = document.getElementById('unreadStatus');
+      const results = document.getElementById('unreadResults');
+      status.textContent = '> Đang tải...';
+      results.innerHTML = '';
+      try {
+        const res = await apiFetch(`${API}/violations/chua-doc-duoc`);
+        const data = await res.json();
+        if (!data.total) {
+          status.textContent = '> Không có vi phạm nào đang chờ tra biển số';
+          results.innerHTML = '<div class="empty">✅ Không có hồ sơ tồn đọng</div>';
+          return;
+        }
+        status.textContent = '> Tìm thấy ' + data.total + ' vi phạm chưa đọc được biển số';
+        log('Chưa rõ biển: ' + data.total + ' hồ sơ tồn đọng', 'warn');
+        window._unreadPlatesData = data.violations;
+        results.innerHTML = data.violations.map((v, idx) => {
+          const videoTime = v.thoi_diem_trong_video_s != null ? ` (giây ${v.thoi_diem_trong_video_s}s trong video)` : '';
+          const trackInfo = v.track_id != null ? ` | Track #${v.track_id}` : '';
+          return `<div onclick="openUnreadPlateModal(${idx})" style="cursor:pointer;border:1px solid var(--warn);border-left:3px solid var(--warn);background:rgba(255,170,0,0.06);padding:10px 12px;font-family:Inter,sans-serif;font-size:13px" title="Bấm để phóng ảnh &amp; nhập biển số">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-family:Inter,sans-serif;font-size:12.5px;color:var(--warn)">MÃ TẠM: ${v.bien_so}</span>
+          <span style="padding:2px 8px;font-size:12px;font-family:Inter,sans-serif;background:rgba(255,170,0,0.2);color:var(--warn);border:1px solid var(--warn)">${v.trang_thai.toUpperCase()}</span>
+        </div>
+        <div style="color:var(--dim);line-height:1.8">
+          <div>⏰ <span style="color:var(--text)">${v.thoi_gian_vi_pham}</span>${videoTime}</div>
+          <div>🚗 <span style="color:var(--text)">${v.loai_phuong_tien}</span>${trackInfo}</div>
+          <div>⚠️ <span style="color:var(--text)">${v.hanh_vi_vi_pham}</span></div>
+        </div>
+        ${evidenceThumbHtml(v.anh_minh_chung)}
+      </div>`;
+        }).join('');
+      } catch (e) {
+        status.textContent = '> Lỗi kết nối: ' + e.message;
+        log('Lỗi tải chưa rõ biển: ' + e.message, 'warn');
+      }
+    }
+
+    // ── MODAL: phóng ảnh + nhập biển số thủ công ──────────────────────────────
+    function openUnreadPlateModal(idx) {
+      const v = (window._unreadPlatesData || [])[idx];
+      if (!v) return;
+      window._unreadModalMaTam = v.bien_so;
+      const img = document.getElementById('unreadModalImg');
+      if (v.anh_minh_chung) { img.src = API + v.anh_minh_chung; img.style.display = ''; }
+      else { img.removeAttribute('src'); img.style.display = 'none'; }
+      const videoTime = v.thoi_diem_trong_video_s != null ? ` (giây ${v.thoi_diem_trong_video_s}s trong video)` : '';
+      const trackInfo = v.track_id != null ? ` | Track #${v.track_id}` : '';
+      document.getElementById('unreadModalInfo').innerHTML =
+        `<div>⏰ <span style="color:var(--text)">${v.thoi_gian_vi_pham}</span>${videoTime}</div>
+         <div>🚗 <span style="color:var(--text)">${v.loai_phuong_tien}</span>${trackInfo}</div>
+         <div>⚠️ <span style="color:var(--text)">${v.hanh_vi_vi_pham}</span></div>
+         <div>🏷️ Mã tạm: <span style="color:var(--warn)">${v.bien_so}</span></div>`;
+      document.getElementById('unreadModalPlateInput').value = '';
+      document.getElementById('unreadModalMsg').textContent = '';
+      document.getElementById('unreadPlateModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('unreadModalPlateInput').focus(), 50);
+    }
+
+    function closeUnreadPlateModal() {
+      document.getElementById('unreadPlateModal').style.display = 'none';
+    }
+
+    async function confirmUnreadPlate() {
+      const maTam = window._unreadModalMaTam;
+      const input = document.getElementById('unreadModalPlateInput');
+      const msg = document.getElementById('unreadModalMsg');
+      const bienSoMoi = input.value.trim();
+      if (!maTam) { closeUnreadPlateModal(); return; }
+      if (!bienSoMoi) { msg.textContent = 'Vui lòng nhập biển số'; return; }
+      msg.style.color = 'var(--dim)'; msg.textContent = 'Đang lưu...';
+      try {
+        const res = await apiFetch(`${API}/violations/cap-nhat-bien-so`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ma_tam: maTam, bien_so_moi: bienSoMoi })
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          msg.style.color = 'var(--danger)';
+          msg.textContent = d.detail || 'Lỗi lưu biển số';
+          return;
+        }
+        log(`Đã cập nhật biển số thủ công: ${maTam} → ${bienSoMoi}. Hồ sơ đã chuyển sang Báo Cáo.`, 'ok');
+        closeUnreadPlateModal();
+        loadUnreadPlates(); // làm mới danh sách còn tồn đọng
+      } catch (e) {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = 'Lỗi kết nối: ' + e.message;
+      }
+    }
+
+    // ── QUẢN TRỊ: người dùng + audit log (chỉ admin) ──────────────────────────
+    async function loadUserList() {
+      if (!currentUser || currentUser.role !== 'admin') return;
+      const box = document.getElementById('userListBox');
+      box.innerHTML = '<div style="color:var(--dim);font-size:12.5px">Đang tải...</div>';
+      try {
+        const res = await apiFetch(`${API}/auth/users`);
+        const data = await res.json();
+        box.innerHTML = data.users.map(u => `
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#0e141d;border:1px solid var(--border);padding:6px 10px;border-radius:8px;font-family:Inter,sans-serif;font-size:12.5px">
+        <div>
+          <span style="color:var(--text)">${u.full_name}</span>
+          <span style="color:var(--dim)"> (@${u.username})</span>
+          <span style="color:var(--accent);margin-left:6px">${ROLE_LABELS_JS[u.role] || u.role}</span>
+          ${!u.active ? '<span style="color:var(--danger);margin-left:6px">[ĐÃ KHOÁ]</span>' : ''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn" onclick="openUserHistory('${u.username}','${u.full_name.replace(/'/g, "\\'")}')" style="padding:3px 8px;font-size:11.5px">🕘 LỊCH SỬ</button>
+          ${u.active && u.username !== currentUser.username ? `<button class="btn" onclick="deactivateUser('${u.username}')" style="padding:3px 8px;font-size:11.5px">🔒 KHOÁ</button>` : ''}
+        </div>
+      </div>`).join('');
+      } catch (e) { box.innerHTML = '<div style="color:var(--danger);font-size:12.5px">Lỗi tải danh sách: ' + e.message + '</div>'; }
+    }
+
+    // ── MODAL: lịch sử hoạt động của 1 tài khoản ──────────────────────────────
+    async function openUserHistory(username, fullName) {
+      document.getElementById('userHistoryTitle').textContent = `🕘 LỊCH SỬ HOẠT ĐỘNG — ${fullName} (@${username})`;
+      const box = document.getElementById('userHistoryBox');
+      box.innerHTML = '<div style="color:var(--dim);font-size:12.5px">Đang tải...</div>';
+      document.getElementById('userHistoryModal').style.display = 'flex';
+      try {
+        const res = await apiFetch(`${API}/audit-log?username=${encodeURIComponent(username)}&limit=200`);
+        const data = await res.json();
+        if (!data.total) { box.innerHTML = '<div style="color:var(--dim)">Chưa có hoạt động nào của tài khoản này</div>'; return; }
+        box.innerHTML = data.logs.map(l => `
+      <div style="border-left:2px solid var(--border);padding:3px 8px;color:var(--dim)">
+        <span style="color:var(--accent)">${l.created_at.replace('T', ' ').slice(0, 19)}</span>
+        → <span style="color:var(--text)">${l.action}</span>
+        ${l.target ? ' — ' + l.target : ''}
+        ${l.detail ? ' <span style="color:var(--dim)">(' + l.detail + ')</span>' : ''}
+      </div>`).join('');
+      } catch (e) { box.innerHTML = '<div style="color:var(--danger);font-size:12.5px">Lỗi tải lịch sử: ' + e.message + '</div>'; }
+    }
+
+    function closeUserHistory() {
+      document.getElementById('userHistoryModal').style.display = 'none';
+    }
+
+    const ROLE_LABELS_JS = { admin: 'Quản trị viên', truc_camera: 'Cán bộ trực camera', xu_phat: 'Cán bộ xử phạt', lanh_dao: 'Lãnh đạo' };
+
+    async function createUser() {
+      const username = document.getElementById('newUserUsername').value.trim();
+      const full_name = document.getElementById('newUserFullname').value.trim();
+      const password = document.getElementById('newUserPassword').value;
+      const role = document.getElementById('newUserRole').value;
+      if (!username || !full_name || !password) { log('Vui lòng nhập đủ thông tin tài khoản', 'warn'); return; }
+      try {
+        const res = await apiFetch(`${API}/auth/users`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, full_name, password, role })
+        });
+        if (!res.ok) { const d = await res.json(); log('Lỗi tạo tài khoản: ' + (d.detail || ''), 'warn'); return; }
+        document.getElementById('newUserUsername').value = '';
+        document.getElementById('newUserFullname').value = '';
+        document.getElementById('newUserPassword').value = '';
+        log(`Đã tạo tài khoản @${username} (${ROLE_LABELS_JS[role]})`, 'ok');
+        loadUserList(); loadAuditLog();
+      } catch (e) { log('Lỗi tạo tài khoản: ' + e.message, 'warn'); }
+    }
+
+    async function deactivateUser(username) {
+      if (!confirm(`Khoá tài khoản @${username}?`)) return;
+      try {
+        await apiFetch(`${API}/auth/users/${username}`, { method: 'DELETE' });
+        log(`Đã khoá tài khoản @${username}`, 'warn');
+        loadUserList(); loadAuditLog();
+      } catch (e) { log('Lỗi khoá tài khoản: ' + e.message, 'warn'); }
+    }
+
+    async function loadAuditLog() {
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'lanh_dao')) return;
+      const box = document.getElementById('auditLogBox');
+      box.innerHTML = '<div style="color:var(--dim);font-size:12.5px">Đang tải...</div>';
+      try {
+        const res = await apiFetch(`${API}/audit-log?limit=200`);
+        const data = await res.json();
+        if (!data.total) { box.innerHTML = '<div style="color:var(--dim)">Chưa có nhật ký nào</div>'; return; }
+        box.innerHTML = data.logs.map(l => `
+      <div style="border-left:2px solid var(--border);padding:3px 8px;color:var(--dim)">
+        <span style="color:var(--accent)">${l.created_at.replace('T', ' ').slice(0, 19)}</span>
+        | <span style="color:var(--text)">@${l.username}</span>
+        (${ROLE_LABELS_JS[l.role] || l.role})
+        → <span style="color:var(--ok,var(--text))">${l.action}</span>
+        ${l.target ? ' — ' + l.target : ''}
+        ${l.detail ? ' <span style="color:var(--dim)">(' + l.detail + ')</span>' : ''}
+      </div>`).join('');
+      } catch (e) { box.innerHTML = '<div style="color:var(--danger);font-size:12.5px">Lỗi tải nhật ký: ' + e.message + '</div>'; }
+    }
+
+    // ── TAB BÁO CÁO: thống kê hôm nay/giờ này + biểu đồ + bộ lọc truy vết ───────
+    let _filtCamsLoaded = false;
+    let _currentFiltPage = 1;
+
+    async function loadReportStats() {
+      try {
+        const res = await apiFetch(`${API}/violations/stats`);
+        const s = await res.json();
+
+        document.getElementById('stat_today').textContent = s.today;
+        document.getElementById('stat_hour').textContent = s.this_hour;
+        document.getElementById('stat_hour_label').textContent = `GIỜ ${new Date().getHours()}H HÔM NAY`;
+        document.getElementById('stat_pending').textContent = s.chua_xu_phat;
+        document.getElementById('stat_done').textContent = s.da_xu_phat;
+
+        // Vẽ biểu đồ cột theo giờ (0h-23h)
+        const maxCount = Math.max(1, ...s.hourly_chart.map(h => h.count));
+        const chartBox = document.getElementById('hourlyChart');
+        const labelBox = document.getElementById('hourlyLabels');
+        const curHour = new Date().getHours();
+        chartBox.innerHTML = s.hourly_chart.map(h => {
+          const pct = Math.max(2, Math.round(h.count / maxCount * 100));
+          const hourNum = parseInt(h.hour);
+          const isNow = hourNum === curHour;
+          const col = h.count === 0 ? 'rgba(255,255,255,0.08)' : (isNow ? 'var(--danger)' : 'var(--accent)');
+          return `<div title="${h.hour}: ${h.count} vi phạm" style="flex:1;min-width:8px;height:${pct}%;background:${col};border-radius:8px 2px 0 0;align-self:flex-end"></div>`;
+        }).join('');
+        labelBox.innerHTML = s.hourly_chart.map((h, i) =>
+          i % 3 === 0 ? `<div style="flex:3;min-width:24px;font-size:11px;color:var(--dim);text-align:center">${h.hour}</div>` : `<div style="flex:1"></div>`
+        ).join('');
+
+        // Nạp danh sách camera vào dropdown filter (chỉ 1 lần)
+        if (!_filtCamsLoaded) {
+          const camSelect = document.getElementById('filt_cam');
+          s.by_cam.forEach(([camName, count]) => {
+            if (!camName) return;
+            const opt = document.createElement('option');
+            opt.value = camName; opt.textContent = `${camName} (${count} TH)`;
+            camSelect.appendChild(opt);
+          });
+          try {
+            const camRes = await apiFetch(`${API}/cameras`);
+            const camData = await camRes.json();
+            camData.cameras.forEach(c => {
+              if ([...camSelect.options].some(o => o.value === c.cam_id)) return;
+              const opt = document.createElement('option');
+              opt.value = c.cam_id; opt.textContent = `${c.name} — ${c.district || ''}`;
+              camSelect.appendChild(opt);
+            });
+          } catch (e) { }
+          _filtCamsLoaded = true;
+        }
+
+        // Set ngày mặc định là hôm nay nếu chưa có
+        const today = new Date();
+        const todayISO = today.toISOString().slice(0, 10);
+        if (!document.getElementById('filt_from_date').value) {
+          document.getElementById('filt_from_date').value = todayISO;
+          document.getElementById('filt_to_date').value = todayISO;
+        }
+        // Tự chạy filter sau khi load stats xong (delay nhỏ để DOM ổn định)
+        setTimeout(() => runFilter(1), 200);
+      } catch (e) {
+        log('Lỗi tải thống kê báo cáo: ' + e.message, 'warn');
+      }
+    }
+
+    function ddmmyyyy(isoDate) {
+      if (!isoDate) return '';
+      const [y, m, d] = isoDate.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    async function runFilter(page) {
+      if (!authToken) { log('Chưa đăng nhập — không thể tải dữ liệu', 'warn'); return; }
+      _currentFiltPage = page || 1;
+
+      const fromDateISO = document.getElementById('filt_from_date').value;  // YYYY-MM-DD
+      const toDateISO = document.getElementById('filt_to_date').value;
+      const fromTime = document.getElementById('filt_from_time').value || '00:00';
+      const toTime = document.getElementById('filt_to_time').value || '23:59';
+      const cam = document.getElementById('filt_cam').value;
+      const plate = document.getElementById('filt_plate').value.trim();
+      const status = document.getElementById('filt_status').value;
+
+      const params = new URLSearchParams();
+      // Chuyển YYYY-MM-DD → DD/MM/YYYY cho backend
+      if (fromDateISO) params.set('tu_ngay', ddmmyyyy(fromDateISO));
+      if (toDateISO) params.set('den_ngay', ddmmyyyy(toDateISO));
+      params.set('tu_gio', fromTime);
+      params.set('den_gio', toTime);
+      if (cam && cam !== 'all') params.set('cam_id', cam);
+      if (plate) params.set('bien_so', plate);
+      if (status && status !== 'all') params.set('trang_thai', status);
+      params.set('page', _currentFiltPage);
+      params.set('limit', 30);
+
+      const resBox = document.getElementById('filtResults');
+      const cntBox = document.getElementById('filtResultCount');
+      resBox.innerHTML = '<div style="color:var(--dim);font-size:12.5px;padding:8px">⏳ Đang tìm kiếm...</div>';
+      cntBox.textContent = '';
+
+      try {
+        const res = await apiFetch(`${API}/violations/filter?${params.toString()}`);
+        const data = await res.json();
+        cntBox.textContent = `→ Tìm thấy ${data.total} hồ sơ`;
+
+        if (!data.violations.length) {
+          resBox.innerHTML = '<div style="color:var(--dim);font-size:13px;padding:12px;text-align:center">Không có vi phạm nào khớp điều kiện lọc</div>';
+          document.getElementById('filtPager').innerHTML = '';
+          return;
+        }
+
+        resBox.innerHTML = data.violations.map(v => {
+          const plateDisplay = (!v.bien_so_doc_duoc)
+            ? '<span style="color:var(--warn)">⚠️ CHƯA ĐỌC ĐƯỢC BIỂN</span>'
+            : `<span style="color:#ffff00;font-family:Inter,sans-serif;font-weight:bold">${v.bien_so}</span>`;
+          const statusColor = v.trang_thai === 'Đã xử phạt' ? 'var(--accent2)' : 'var(--warn)';
+          return `<div style="border:1px solid var(--border);border-left:3px solid ${statusColor};background:#0e141d;padding:8px 12px;border-radius:8px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          ${plateDisplay}
+          <span style="font-size:12px;padding:2px 8px;border-radius:8px;background:${statusColor}22;color:${statusColor}">${v.trang_thai}</span>
+        </div>
+        <div style="color:var(--dim);font-family:Inter,sans-serif;font-size:12.5px;line-height:1.7">
+          <div>⏰ ${v.thoi_gian_vi_pham}</div>
+          <div>🚗 ${v.loai_phuong_tien}${v.cam_id ? ' | 📍 ' + v.cam_id : ''}${v.dia_diem_vi_pham ? ' — ' + v.dia_diem_vi_pham : ''}</div>
+          ${v.nguoi_xu_phat ? `<div>👤 Xử phạt: @${v.nguoi_xu_phat} — ${v.thoi_gian_xu_phat || ''}</div>` : ''}
+        </div>
+        ${evidenceThumbHtml(v.anh_minh_chung)}
+      </div>`;
+        }).join('');
+
+        const pager = document.getElementById('filtPager');
+        if (data.total_pages > 1) {
+          let html = '';
+          for (let p = 1; p <= data.total_pages; p++) {
+            html += `<button class="btn${p === data.page ? ' bp' : ''}" onclick="runFilter(${p})" style="padding:4px 10px;font-size:12px">${p}</button>`;
+          }
+          pager.innerHTML = html;
+        } else { pager.innerHTML = ''; }
+
+      } catch (e) {
+        resBox.innerHTML = `<div style="color:var(--danger);font-size:13px;padding:8px">
+      ❌ ${e.message}<br>
+      <span style="font-size:12px;color:var(--dim)">Kiểm tra server đang chạy và bạn đã đăng nhập.</span>
+    </div>`;
+        cntBox.textContent = '';
+      }
+    }
+
+    function clearFilter() {
+      document.getElementById('filt_from_date').value = '';
+      document.getElementById('filt_to_date').value = '';
+      document.getElementById('filt_from_time').value = '00:00';
+      document.getElementById('filt_to_time').value = '23:59';
+      document.getElementById('filt_cam').value = 'all';
+      document.getElementById('filt_plate').value = '';
+      document.getElementById('filt_status').value = 'all';
+      runFilter(1);
+    }
+
+
+    // Hiện popup cảnh báo vi phạm nổi bật trên ô camera trong 4 giây
+    // ── MODAL CẤU HÌNH CAMERA ──────────────────────────────────────────────────
+    let _setupCamId = null;   // null = tạo mới, string = sửa camera đang có
+    let _setupStream = null;   // stream webcam tạm
+    let _setupMode = null;   // 'roi' | 'line' | null
+    let _setupClicks = [];
+    let _setupRoi = null;   // [[x,y],...]
+    let _setupLine = null;   // [[x1,y1],[x2,y2]]
+    let _setupLight = 'RED';
+    let _setupSchedule = [];
+
+    function openCamSetup(editCamId) {
+      _setupCamId = editCamId;
+      _setupMode = null; _setupClicks = []; _setupRoi = null; _setupLine = null;
+      _setupLight = 'RED'; _setupSchedule = [];
+
+      // Nếu sửa cam đang có thì điền sẵn
+      if (editCamId) {
+        const cam = gridCams.find(c => c.id === editCamId);
+        if (cam) {
+          document.getElementById('setupName').value = cam.name || '';
+          document.getElementById('setupDistrict').value = cam.district || '';
+          document.getElementById('setupType').value = cam.type || 'video';
+          _setupRoi = cam.roiPts ? JSON.parse(JSON.stringify(cam.roiPts)) : null;
+          _setupLine = cam.linePts ? JSON.parse(JSON.stringify(cam.linePts)) : null;
+          _setupLight = cam.light || 'RED';
+          _setupSchedule = cam.schedule ? JSON.parse(JSON.stringify(cam.schedule)) : [];
+          document.getElementById('setupModalTitle').textContent = `⚙️ CẤU HÌNH: ${cam.name}`;
+        }
+      } else {
+        document.getElementById('setupName').value = '';
+        document.getElementById('setupDistrict').value = '';
+        document.getElementById('setupType').value = 'video';
+        document.getElementById('setupModalTitle').textContent = '⚙️ THÊM CAMERA MỚI';
+      }
+
+      setupRefreshLight();
+      setupRenderSchedule();
+      setupRefreshCanvas();
+
+      document.getElementById('camSetupModal').style.display = 'flex';
+      document.getElementById('setupHint').textContent = 'Bấm ▶ TẢI để load video, sau đó vẽ ROI và vạch dừng.';
+      document.getElementById('setupDrawHint').textContent = '';
+    }
+
+    function closeCamSetup() {
+      // Dừng stream webcam tạm nếu có
+      if (_setupStream) { _setupStream.getTracks().forEach(t => t.stop()); _setupStream = null; }
+      const v = document.getElementById('setupVid');
+      v.srcObject = null; v.src = ''; v.style.display = 'none';
+      document.getElementById('setupPh').style.display = 'flex';
+      document.getElementById('camSetupModal').style.display = 'none';
+    }
+
+    async function setupLoadSource() {
+      const type = document.getElementById('setupType').value;
+      if (_setupStream) { _setupStream.getTracks().forEach(t => t.stop()); _setupStream = null; }
+      const v = document.getElementById('setupVid');
+      if (type === 'webcam') {
+        try {
+          _setupStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+          v.srcObject = _setupStream; v.style.display = 'block'; v.play();
+          document.getElementById('setupPh').style.display = 'none';
+          document.getElementById('setupHint').textContent = '✅ Webcam đã bật. Bấm "📦 VẼ ROI" để bắt đầu cấu hình.';
+          setTimeout(() => setupRefreshCanvas(), 500);
+        } catch (e) { document.getElementById('setupHint').textContent = '❌ Lỗi webcam: ' + e.message; }
+      } else {
+        const inp = document.getElementById('setupFileInput');
+        inp.onchange = () => {
+          if (!inp.files[0]) return;
+          v.src = URL.createObjectURL(inp.files[0]); v.style.display = 'block'; v.play();
+          document.getElementById('setupPh').style.display = 'none';
+          document.getElementById('setupHint').textContent = '✅ Video đã tải. Bấm "📦 VẼ ROI" để cấu hình.';
+          setTimeout(() => setupRefreshCanvas(), 300);
+          inp.value = '';
+        };
+        inp.click();
+      }
+    }
+
+    function setupSetMode(mode) {
+      _setupMode = (_setupMode === mode) ? null : mode;
+      _setupClicks = [];
+      document.getElementById('setupBtnRoi').classList.toggle('active', _setupMode === 'roi');
+      document.getElementById('setupBtnLine').classList.toggle('active', _setupMode === 'line');
+      if (_setupMode === 'roi') document.getElementById('setupDrawHint').textContent = '🖊 Click 4 điểm theo góc đường (chiều kim đồng hồ)...';
+      else if (_setupMode === 'line') document.getElementById('setupDrawHint').textContent = '🖊 Click điểm đầu của vạch dừng...';
+      else document.getElementById('setupDrawHint').textContent = '';
+      setupRefreshCanvas();
+    }
+
+    function setupClearDraw() {
+      _setupRoi = null; _setupLine = null; _setupClicks = []; _setupMode = null;
+      document.getElementById('setupBtnRoi').classList.remove('active');
+      document.getElementById('setupBtnLine').classList.remove('active');
+      document.getElementById('setupDrawHint').textContent = '';
+      setupRefreshCanvas();
+    }
+
+    function setupSetLight(l) {
+      _setupLight = l; setupRefreshLight();
+    }
+    function setupRefreshLight() {
+      document.getElementById('setupBtnRed').classList.toggle('active', _setupLight === 'RED');
+      document.getElementById('setupBtnGreen').classList.toggle('active', _setupLight === 'GREEN');
+    }
+
+    function setupAddSchedule(light) {
+      const from = parseInt(document.getElementById('setupFrom').value);
+      const to = parseInt(document.getElementById('setupTo').value);
+      if (isNaN(from) || isNaN(to) || to <= from) { alert('Giờ không hợp lệ'); return; }
+      _setupSchedule.push({ from, to, light });
+      _setupSchedule.sort((a, b) => a.from - b.from);
+      document.getElementById('setupFrom').value = '';
+      document.getElementById('setupTo').value = '';
+      setupRenderSchedule();
+    }
+    function setupRenderSchedule() {
+      document.getElementById('setupScheduleList').innerHTML = _setupSchedule.length === 0
+        ? '<div style="color:var(--dim);font-size:12.5px">Chưa có lịch — mặc định đèn đỏ toàn bộ</div>'
+        : _setupSchedule.map((s, i) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#0e141d;padding:4px 8px;border-radius:8px;font-family:Inter,sans-serif;font-size:12.5px">
+        <span>${s.from}s → ${s.to}s : ${s.light === 'RED' ? '🔴 ĐỎ' : '🟢 XANH'}</span>
+        <button onclick="_setupSchedule.splice(${i},1);setupRenderSchedule()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px">✕</button>
+      </div>`).join('');
+    }
+
+    // Ánh xạ canvas cấu hình (kích thước hiển thị, VD 560x315) <-> toạ độ GỐC của
+    // video (VD 1280x720). _setupRoi/_setupLine/_setupClicks LUÔN được lưu theo
+    // toạ độ GỐC của video (giống hệ toạ độ mà backend nhận và canvas giám sát thật vẽ),
+    // canvas cấu hình chỉ dùng _setupGeom để quy đổi sang toạ độ hiển thị khi vẽ preview.
+    // (Lỗi cũ: các điểm click bị lưu thẳng theo toạ độ canvas 560x315 rồi gán
+    // nguyên vào cam.roiPts/linePts, trong khi canvas giám sát + backend lại dùng
+    // độ phân giải gốc video (VD 1280x720) => ROI/vạch lệch về góc trái-trên và
+    // hầu hết detection bị lọc rớt khỏi ROI, nên không có box/kết quả nào hiện ra.)
+    let _setupGeom = { dx: 0, dy: 0, dw: 0, dh: 0, vw: 0, vh: 0 };
+
+    // Vẽ frame video + ROI/line/tmpClicks lên canvas setup
+    function setupRefreshCanvas() {
+      const v = document.getElementById('setupVid');
+      const c = document.getElementById('setupCanvas');
+      const ctx = c.getContext('2d');
+      const cw = c.offsetWidth || 560; const ch = c.offsetHeight || 315;
+      c.width = cw; c.height = ch;
+      ctx.clearRect(0, 0, cw, ch);
+
+      // Vẽ frame video (scale vừa canvas, giữ tỉ lệ - letterbox)
+      let dx = 0, dy = 0, dw = cw, dh = ch;
+      if (v.videoWidth && v.style.display !== 'none') {
+        const vr = v.videoWidth / v.videoHeight; const cr = cw / ch;
+        if (vr > cr) { dh = Math.round(cw / vr); dy = Math.round((ch - dh) / 2); dw = cw; }
+        else { dw = Math.round(ch * vr); dx = Math.round((cw - dw) / 2); dh = ch; }
+        ctx.drawImage(v, dx, dy, dw, dh);
+        _setupGeom = { dx, dy, dw, dh, vw: v.videoWidth, vh: v.videoHeight };
+      } else {
+        ctx.fillStyle = '#040c14'; ctx.fillRect(0, 0, cw, ch);
+        _setupGeom = { dx: 0, dy: 0, dw: cw, dh: ch, vw: cw, vh: ch }; // chưa có video: coi canvas = toạ độ gốc
+      }
+
+      // Quy đổi 1 điểm toạ độ GỐC video -> toạ độ hiển thị trên canvas preview
+      const v2c = ([vx, vy]) => {
+        const g = _setupGeom;
+        if (!g.vw || !g.vh) return [vx, vy];
+        return [g.dx + vx * (g.dw / g.vw), g.dy + vy * (g.dh / g.vh)];
+      };
+
+      // Vẽ ROI
+      if (_setupRoi && _setupRoi.length >= 3) {
+        const pts = _setupRoi.map(v2c);
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.closePath();
+        ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(0,255,255,0.07)'; ctx.fill();
+        pts.forEach(([px, py], i) => { ctx.fillStyle = '#00ffff'; ctx.font = 'bold 12px Inter'; ctx.fillText(i + 1, px + 4, py - 4); });
+      }
+      // Vẽ vạch dừng
+      if (_setupLine && _setupLine.length >= 2) {
+        const [p1, p2] = _setupLine.map(v2c);
+        ctx.strokeStyle = '#ff3a3a'; ctx.lineWidth = 2; ctx.setLineDash([8, 4]);
+        ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = '#ff3a3a'; ctx.font = 'bold 10px Inter'; ctx.fillText('VẠCH DỪNG', p1[0] + 4, p1[1] - 4);
+      }
+      // Preview tmpClicks
+      const tpts = _setupClicks.map(v2c);
+      tpts.forEach(([px, py], i) => {
+        ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffff00'; ctx.fill();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 10px Inter'; ctx.fillText(i + 1, px + 7, py + 4);
+      });
+      if (_setupMode === 'roi' && tpts.length > 1) {
+        ctx.strokeStyle = 'rgba(255,255,0,0.5)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(tpts[0][0], tpts[0][1]);
+        tpts.forEach(([px, py]) => ctx.lineTo(px, py)); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+
+    // Click trên canvas setup để vẽ ROI/line
+    document.addEventListener('DOMContentLoaded', () => {
+      const c = document.getElementById('setupCanvas');
+      c.addEventListener('click', (e) => {
+        if (!_setupMode) return;
+        const rect = c.getBoundingClientRect();
+        // Toạ độ pixel thật trên canvas (đã quy theo tỉ lệ hiển thị CSS)
+        const cx = (e.clientX - rect.left) * (c.width / rect.width);
+        const cy = (e.clientY - rect.top) * (c.height / rect.height);
+        // Quy đổi ngược từ toạ độ canvas (đã letterbox) -> toạ độ GỐC của video,
+        // để khớp với toạ độ mà canvas giám sát thật (độ phân giải gốc) và backend dùng.
+        const g = _setupGeom;
+        let x = g.dw ? (cx - g.dx) * (g.vw / g.dw) : cx;
+        let y = g.dh ? (cy - g.dy) * (g.vh / g.dh) : cy;
+        // Kẹp lại nếu click rơi vào phần viền đen (letterbox) ngoài khung hình thật
+        x = Math.max(0, Math.min(g.vw || x, x)); y = Math.max(0, Math.min(g.vh || y, y));
+        _setupClicks.push([x, y]);
+        const n = _setupClicks.length;
+        if (_setupMode === 'roi') {
+          if (n < 4) { document.getElementById('setupDrawHint').textContent = `🖊 Click điểm ${n + 1}/4...`; setupRefreshCanvas(); }
+          else { _setupRoi = [..._setupClicks]; _setupClicks = []; _setupMode = null; document.getElementById('setupBtnRoi').classList.remove('active'); document.getElementById('setupDrawHint').textContent = '✅ ROI đã đặt'; setupRefreshCanvas(); }
+        } else if (_setupMode === 'line') {
+          if (n < 2) { document.getElementById('setupDrawHint').textContent = '🖊 Click điểm 2 của vạch dừng...'; setupRefreshCanvas(); }
+          else { _setupLine = [..._setupClicks]; _setupClicks = []; _setupMode = null; document.getElementById('setupBtnLine').classList.remove('active'); document.getElementById('setupDrawHint').textContent = '✅ Vạch dừng đã đặt'; setupRefreshCanvas(); }
+        }
+      });
+      // Cập nhật canvas liên tục khi video đang play (để xem rõ hơn)
+      setInterval(() => { if (document.getElementById('camSetupModal').style.display !== 'none') { const v = document.getElementById('setupVid'); if (v.videoWidth && !v.paused) setupRefreshCanvas(); } }, 150);
+    });
+
+    async function saveCamSetup() {
+      const name = document.getElementById('setupName').value.trim() || `Camera ${gridCamSeq + 1}`;
+      const district = document.getElementById('setupDistrict').value.trim();
+      const type = document.getElementById('setupType').value;
+      const v = document.getElementById('setupVid');
+
+      if (!v.videoWidth && !_setupStream) {
+        if (!confirm('Chưa tải video. Vẫn lưu cấu hình không?')) return;
+      }
+
+      if (_setupCamId) {
+        // Sửa camera đang có
+        const cam = gridCams.find(c => c.id === _setupCamId);
+        if (cam) {
+          cam.name = name; cam.district = district; cam.roiPts = _setupRoi;
+          cam.linePts = _setupLine; cam.light = _setupLight; cam.defaultLight = _setupLight; cam.schedule = _setupSchedule;
+          saveCameraConfig(cam);
+          log(`Đã cập nhật cấu hình ${name}`, 'ok');
+        }
+      } else {
+        // Tạo camera mới — truyền video/stream từ setup vào grid
+        const presetCfg = { name, district, source_type: type, roi: _setupRoi, line_pts: _setupLine, light: _setupLight, schedule: _setupSchedule };
+        await addGridCamera(null, presetCfg, v, _setupStream);
+        _setupStream = null; // đã chuyển quyền sở hữu stream sang cam, không stop ở closeCamSetup
+      }
+      closeCamSetup();
+    }
+
+    // ── GIÁM SÁT ĐA CAMERA (lưới live stream kiểu CCTV) ───────────────────────
+    let gridCams = [];
+    let gridCamSeq = 0;
+    const DISTRICT_NAMES = ['Cầu Giấy', 'Ba Đình', 'Hoàn Kiếm', 'Hai Bà Trưng', 'Tây Hồ', 'Đống Đa', 'Thanh Xuân', 'Long Biên'];
+    // Có thể điều chỉnh hai tham số này để thay đổi cảm giác box:
+    // alphaPos: càng lớn -> box bám sát xe "căng" hơn, càng nhỏ -> box mượt hơn.
+    // alphaSize: càng lớn -> box đổi kích thước nhanh hơn, càng nhỏ -> box ổn định hơn.
+    const LIVE_BOX_SMOOTHING = {
+      alphaPos: 0.50,
+      alphaSize: 0.12
+    };
+
+    // Đổi số cột của lưới camera để phóng to/thu nhỏ khung hình (giữ tỉ lệ 16:9 mỗi khung).
+    // 1 cột = camera to nhất (chiếm hết bề ngang khu vực), 3 cột = nhỏ nhất, xem được nhiều camera cùng lúc.
+    function setGridCols(n) {
+      document.getElementById('camGrid').style.gridTemplateColumns = `repeat(${n},1fr)`;
+      [1, 2, 3].forEach(i => document.getElementById('gridColsBtn' + i).classList.toggle('active', i === n));
+      try { localStorage.setItem('gridCols', String(n)); } catch (e) { }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      let saved = 2;
+      try { saved = parseInt(localStorage.getItem('gridCols')) || 2; } catch (e) { }
+      setGridCols(saved);
+    });
+
+    function gridTimeStr() {
+      const d = new Date();
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+
+    async function addGridCamera(presetCamId, presetCfg, srcVid, srcStream) {
+      gridCamSeq++;
+      const camId = presetCamId || ('gcam' + gridCamSeq);
+      const cfg = presetCfg || {};
+      const cam = {
+        id: camId, type: cfg.source_type || 'video',
+        stream: srcStream || null, name: cfg.name || `Camera ${String(gridCamSeq).padStart(2, '0')}`,
+        district: cfg.district || DISTRICT_NAMES[(gridCamSeq - 1) % DISTRICT_NAMES.length],
+        lastDetections: [], drawLoop: null, _detectTimer: null, running: false,
+        roiPts: cfg.roi || null, linePts: cfg.line_pts || null,
+        light: cfg.light || 'RED', schedule: cfg.schedule || [],
+        drawMode: null, tmpClicks: []
+      };
+      gridCams.push(cam);
+      const savedRow = document.querySelector(`#savedCamsBox [data-camid="${camId}"]`);
+      if (savedRow) savedRow.remove();
+
+      const wrapper = document.createElement('div');
+      wrapper.id = camId + '_wrap';
+      const card = document.createElement('div');
+      card.id = camId;
+      card.style.cssText = 'position:relative;background:#000;border:1px solid var(--border);border-radius:10px;overflow:hidden;aspect-ratio:16/9';
+      card.innerHTML = `
+    <div style="position:absolute;top:8px;left:8px;z-index:3;display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.55);padding:3px 8px;border-radius:8px">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--danger);box-shadow:0 0 6px var(--danger);animation:blink2 1.4s infinite"></span>
+      <span style="font-family:Inter,sans-serif;font-size:12px;color:#fff;letter-spacing:0.2px">LIVE STREAM</span>
+    </div>
+    <div style="position:absolute;top:8px;right:70px;z-index:3;background:rgba(0,0,0,0.55);padding:3px 8px;border-radius:8px;font-family:Inter,sans-serif;font-size:12px;color:#bbb" id="${camId}_time">--</div>
+    <div id="${camId}_recbadge" style="display:none;position:absolute;top:8px;left:8px;z-index:3;align-items:center;gap:5px;background:rgba(220,0,0,0.85);padding:3px 8px;border-radius:8px;transform:translateY(24px)">
+      <span style="width:7px;height:7px;border-radius:50%;background:#fff;animation:blink2 1s infinite"></span>
+      <span style="font-family:Inter,sans-serif;font-size:12px;color:#fff;letter-spacing:0.2px">REC <span id="${camId}_rectime">00:00</span></span>
+    </div>
+    <div id="${camId}_ph" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px;z-index:1">[ ĐANG KHỞI ĐỘNG... ]</div>
+    <video id="${camId}_v" autoplay muted playsinline loop style="display:none;width:100%;height:100%;object-fit:cover"></video>
+    <canvas id="${camId}_c" style="position:absolute;inset:0;width:100%;height:100%;z-index:2"></canvas>
+    <div style="position:absolute;bottom:0;left:0;right:0;z-index:3;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(transparent,rgba(0,0,0,0.75));padding:18px 8px 6px">
+      <span style="color:#fff;font-family:Inter,sans-serif;font-size:13px">${cam.name}</span>
+      <span style="font-size:12px;color:#999;text-transform:uppercase">${cam.district}</span>
+    </div>
+    <div style="position:absolute;top:6px;right:6px;z-index:4;display:flex;gap:3px" id="${camId}_actions" class="cam-actions">
+      <button id="${camId}_broi" onclick="setGridDrawMode('${camId}','roi')" title="Vẽ ROI" style="background:rgba(0,180,255,0.85);border:none;color:#fff;width:22px;height:22px;border-radius:8px;font-size:13px;line-height:22px;cursor:pointer">📦</button>
+      <button id="${camId}_bline" onclick="setGridDrawMode('${camId}','line')" title="Vẽ vạch dừng" style="background:rgba(0,180,255,0.85);border:none;color:#fff;width:22px;height:22px;border-radius:8px;font-size:13px;line-height:22px;cursor:pointer">➖</button>
+      <button id="${camId}_bred" onclick="setGridLight('${camId}','RED')" title="Đèn đỏ" style="background:rgba(255,107,107,0.85);border:none;color:#fff;width:22px;height:22px;border-radius:8px;font-size:13px;line-height:22px;cursor:pointer">🔴</button>
+      <button id="${camId}_bgreen" onclick="setGridLight('${camId}','GREEN')" title="Đèn xanh" style="background:rgba(61,220,151,0.55);border:none;color:#fff;width:22px;height:22px;border-radius:8px;font-size:13px;line-height:22px;cursor:pointer">🟢</button>
+      <button id="${camId}_brec" onclick="toggleCamRecord('${camId}')" title="Ghi hình" style="background:rgba(0,180,255,0.85);border:none;color:#fff;width:22px;height:22px;border-radius:8px;font-size:13px;line-height:22px;cursor:pointer">⏺</button>
+      <button onclick="openCamSetup('${camId}')" title="Cấu hình" style="background:rgba(0,180,255,0.85);border:none;color:#fff;width:22px;height:22px;border-radius:8px;font-size:13.5px;line-height:22px;cursor:pointer">⚙</button>
+      <button onclick="removeGridCamera('${camId}')" title="Xoá" style="background:rgba(255,107,107,0.85);border:none;color:#fff;width:22px;height:22px;border-radius:8px;font-size:13.5px;line-height:22px;cursor:pointer">✕</button>
+    </div>
+    <div id="${camId}_drawhint" style="position:absolute;top:34px;left:8px;right:8px;z-index:4;color:#ffe066;font-family:Inter,sans-serif;font-size:12px;text-shadow:0 0 4px #000"></div>
+  `;
+      // Ẩn nút action mặc định, hiện khi hover
+      const style = document.createElement('style');
+      style.textContent = `.cam-actions{opacity:0;transition:opacity .2s} div:hover>.cam-actions{opacity:1}`;
+      if (!document.getElementById('camActionStyle')) { style.id = 'camActionStyle'; document.head.appendChild(style); }
+
+      wrapper.appendChild(card);
+      document.getElementById('camGrid').appendChild(wrapper);
+
+      // Phản ánh trạng thái đèn hiện có (từ cấu hình đã lưu) lên nút đèn của card
+      document.getElementById(camId + '_bred').classList.toggle('active', cam.light === 'RED');
+      document.getElementById(camId + '_bgreen').classList.toggle('active', cam.light === 'GREEN');
+
+      // Click trên canvas của card (khi đang ở chế độ vẽ ROI/vạch) để ghi nhận điểm —
+      // toạ độ được quy theo đúng độ phân giải gốc c.width/c.height (đã = v.videoWidth/Height
+      // khi freezeGridCam chạy), nên khớp thẳng với toạ độ backend/canvas giám sát dùng.
+      const canvasEl = document.getElementById(camId + '_c');
+      canvasEl.addEventListener('click', (e) => {
+        if (!cam.drawMode) return;
+        const rect = canvasEl.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvasEl.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvasEl.height / rect.height);
+        cam.tmpClicks.push([x, y]);
+        const n = cam.tmpClicks.length;
+        const hint = document.getElementById(camId + '_drawhint');
+        if (cam.drawMode === 'roi') {
+          if (n < 4) {
+            if (hint) hint.textContent = `🖊 Click điểm ${n + 1}/4... — VIDEO ĐÃ TẠM DỪNG`;
+          } else {
+            cam.roiPts = [...cam.tmpClicks]; cam.tmpClicks = []; cam.drawMode = null;
+            document.getElementById(camId + '_broi').classList.remove('active');
+            if (hint) hint.textContent = '✅ ROI đã đặt';
+            saveCameraConfig(cam); resumeGridCam(cam); return;
+          }
+        } else if (cam.drawMode === 'line') {
+          if (n < 2) {
+            if (hint) hint.textContent = '🖊 Click điểm 2 của vạch dừng... — VIDEO ĐÃ TẠM DỪNG';
+          } else {
+            cam.linePts = [...cam.tmpClicks]; cam.tmpClicks = []; cam.drawMode = null;
+            document.getElementById(camId + '_bline').classList.remove('active');
+            if (hint) hint.textContent = '✅ Vạch dừng đã đặt';
+            saveCameraConfig(cam); resumeGridCam(cam); return;
+          }
+        }
+        // Vẽ overlay (điểm vừa chọn + ROI/line hiện có) lên khung hình đang đóng băng
+        drawStaticOverlay(cam, canvasEl.getContext('2d'));
+      });
+
+      if (!document.getElementById('blink2Style')) {
+        const st = document.createElement('style'); st.id = 'blink2Style';
+        st.textContent = '@keyframes blink2{0%,100%{opacity:1}50%{opacity:.25}}';
+        document.head.appendChild(st);
+      }
+      setInterval(() => {
+        const t = document.getElementById(camId + '_time'); if (t) t.textContent = gridTimeStr();
+        if (cam.recording && cam.recordStartTime) {
+          const rt = document.getElementById(camId + '_rectime');
+          if (rt) {
+            const s = Math.floor((Date.now() - cam.recordStartTime) / 1000);
+            rt.textContent = `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+          }
+        }
+      }, 1000);
+
+      const v = document.getElementById(camId + '_v');
+      cam._monStart = Date.now();
+      if (srcStream) {
+        cam.stream = srcStream;
+        v.srcObject = srcStream; v.style.display = 'block';
+        document.getElementById(camId + '_ph').style.display = 'none';
+        startGridDrawLoop(cam); startGridDetectLoop(cam);
+        saveCameraConfig(cam);
+        log(`✅ "${cam.name}" đã bắt đầu giám sát`, 'ok');
+      } else if (srcVid && srcVid.src) {
+        v.src = srcVid.src; v.style.display = 'block'; v.play();
+        document.getElementById(camId + '_ph').style.display = 'none';
+        if (authToken) apiFetch(`${API}/stream-frame/${camId}/reset`, { method: 'DELETE' }).catch(() => { });
+        cam.lastDetections = [];
+        startGridDrawLoop(cam); startGridDetectLoop(cam);
+        saveCameraConfig(cam);
+        log(`✅ "${cam.name}" đã bắt đầu giám sát`, 'ok');
+      } else {
+        // Không có nguồn video ngay — mở modal cấu hình để user chọn nguồn,
+        // cfg ROI/line/đèn đã được điền sẵn từ DB
+        document.getElementById(camId + '_ph').textContent = '[ BẤM ⚙ ĐỂ CHỌN NGUỒN VIDEO ]';
+        // Tự mở modal với cfg sẵn (nhưng không có video) để user bấm TẢI
+        setTimeout(() => {
+          _setupCamId = camId;
+          _setupRoi = cam.roiPts; _setupLine = cam.linePts;
+          _setupLight = cam.light || 'RED'; _setupSchedule = cam.schedule || [];
+          _setupMode = null; _setupClicks = [];
+          document.getElementById('setupName').value = cam.name;
+          document.getElementById('setupDistrict').value = cam.district || '';
+          document.getElementById('setupType').value = cam.type || 'video';
+          document.getElementById('setupModalTitle').textContent = `⚙️ CHỌN NGUỒN: ${cam.name}`;
+          document.getElementById('setupHint').textContent = 'Cấu hình ROI/vạch đã lưu sẵn. Chỉ cần bấm ▶ TẢI để chọn nguồn video rồi bấm LƯU.';
+          setupRefreshLight(); setupRenderSchedule(); setupRefreshCanvas();
+          document.getElementById('camSetupModal').style.display = 'flex';
+        }, 100);
+      }
+      document.getElementById('gridStatus').textContent = `> ${gridCams.length} camera đang hoạt động`;
+    }
+
+
+    function setGridDrawMode(camId, mode) {
+      const cam = gridCams.find(c => c.id === camId); if (!cam) return;
+      const wasDrawing = cam.drawMode !== null;
+      cam.drawMode = (cam.drawMode === mode) ? null : mode;
+      cam.tmpClicks = [];
+
+      document.getElementById(camId + '_broi').classList.toggle('active', cam.drawMode === 'roi');
+      document.getElementById(camId + '_bline').classList.toggle('active', cam.drawMode === 'line');
+
+      if (cam.drawMode) {
+        // Bắt đầu vẽ → freeze frame: dừng draw loop, chụp frame hiện tại vào canvas
+        // để user vẽ trên ảnh tĩnh, dễ nhìn hơn nhiều
+        freezeGridCam(cam);
+        document.getElementById(camId + '_drawhint').textContent = cam.drawMode === 'roi'
+          ? '🖊 Click 4 điểm theo góc đường (chiều kim đồng hồ) — VIDEO ĐÃ TẠM DỪNG'
+          : '🖊 Click điểm 1 của vạch dừng... — VIDEO ĐÃ TẠM DỪNG';
+      } else {
+        // Tắt chế độ vẽ → resume draw loop
+        resumeGridCam(cam);
+        document.getElementById(camId + '_drawhint').textContent = '';
+      }
+    }
+
+    // Chụp frame hiện tại từ video vào canvas, dừng draw loop
+    function freezeGridCam(cam) {
+      if (cam.drawLoop) { cancelAnimationFrame(cam.drawLoop); cam.drawLoop = null; }
+      const v = document.getElementById(cam.id + '_v');
+      const c = document.getElementById(cam.id + '_c');
+      if (!v || !v.videoWidth) return;
+      c.width = v.videoWidth; c.height = v.videoHeight;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(v, 0, 0);  // chụp frame tĩnh
+      // Vẽ overlay ROI/line hiện có lên frame tĩnh
+      drawStaticOverlay(cam, ctx);
+    }
+
+    // Vẽ ROI polygon, line, và tmpClicks preview lên ctx (dùng cho cả freeze frame và realDraw)
+    function drawStaticOverlay(cam, ctx) {
+      const c = document.getElementById(cam.id + '_c');
+      if (!c) return;
+      if (cam.roiPts && cam.roiPts.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(cam.roiPts[0][0], cam.roiPts[0][1]);
+        for (let i = 1; i < cam.roiPts.length; i++) ctx.lineTo(cam.roiPts[i][0], cam.roiPts[i][1]);
+        ctx.closePath();
+        ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(0,255,255,0.08)'; ctx.fill();
+        cam.roiPts.forEach(([px, py], i) => {
+          ctx.fillStyle = '#00ffff'; ctx.font = 'bold 11px Inter';
+          ctx.fillText(i + 1, px + 4, py - 4);
+        });
+      }
+      if (cam.linePts && cam.linePts.length >= 2) {
+        const [lx1, ly1] = cam.linePts[0]; const [lx2, ly2] = cam.linePts[1];
+        ctx.strokeStyle = 'rgba(255,107,107,0.9)'; ctx.lineWidth = 2; ctx.setLineDash([8, 4]);
+        ctx.beginPath(); ctx.moveTo(lx1, ly1); ctx.lineTo(lx2, ly2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(255,107,107,0.85)'; ctx.font = 'bold 10px Inter';
+        ctx.fillText('VẠCH DỪNG', lx1 + 4, ly1 - 4);
+      }
+      // Preview các điểm đang click dở
+      if (cam.tmpClicks && cam.tmpClicks.length > 0) {
+        cam.tmpClicks.forEach(([px, py], i) => {
+          ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffff00'; ctx.fill();
+          ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+          ctx.fillStyle = '#ffff00'; ctx.font = 'bold 10px Inter';
+          ctx.fillText(i + 1, px + 8, py - 4);
+        });
+        if (cam.drawMode === 'roi' && cam.tmpClicks.length > 1) {
+          ctx.strokeStyle = 'rgba(255,255,0,0.6)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.moveTo(cam.tmpClicks[0][0], cam.tmpClicks[0][1]);
+          for (let i = 1; i < cam.tmpClicks.length; i++) ctx.lineTo(cam.tmpClicks[i][0], cam.tmpClicks[i][1]);
+          ctx.stroke(); ctx.setLineDash([]);
+        }
+        if (cam.drawMode === 'line' && cam.tmpClicks.length === 1) {
+          ctx.strokeStyle = 'rgba(255,107,107,0.5)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(cam.tmpClicks[0][0], cam.tmpClicks[0][1]);
+          ctx.lineTo(cam.tmpClicks[0][0] + 100, cam.tmpClicks[0][1]); ctx.stroke(); ctx.setLineDash([]);
+        }
+      }
+    }
+
+    // Resume draw loop sau khi xong vẽ
+    function startGridDrawLoop(cam) {
+      const v = document.getElementById(cam.id + '_v');
+      const c = document.getElementById(cam.id + '_c');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+
+      // Ẩn thẻ video — canvas vẽ cả video frame + box (giống video mẫu)
+      if (v) { v.style.visibility = 'hidden'; v.style.position = 'absolute'; v.style.width = '0'; v.style.height = '0'; }
+
+      const realDraw = () => {
+        if (!gridCams.includes(cam)) { cam.drawLoop = null; return; }
+        if (cam.drawMode) { cam.drawLoop = null; return; }
+        try {
+          if (v && v.videoWidth && v.videoWidth > 0) {
+            if (c.width !== v.videoWidth) { c.width = v.videoWidth; c.height = v.videoHeight; }
+            // 1. Vẽ frame video lên canvas
+            ctx.drawImage(v, 0, 0, c.width, c.height);
+
+            // 1b. Áp dụng "lịch đèn theo giây" nếu có — video có loop nên v.currentTime
+            // tự lặp lại đúng chu kỳ 0..duration, khớp với ý nghĩa "0s→30s đỏ, 30s→60s xanh"
+            // (trước đây cam.schedule chỉ được LƯU chứ không hề được đọc lại khi giám sát).
+            if (cam.schedule && cam.schedule.length > 0) {
+              const tSec = v.duration ? v.currentTime : ((Date.now() - (cam._monStart || Date.now())) / 1000);
+              const match = cam.schedule.find(s => tSec >= s.from && tSec < s.to);
+              cam.light = match ? match.light : (cam.defaultLight || 'RED');
+            }
+          } else {
+            if (c.width === 0) { c.width = c.offsetWidth || 640; c.height = c.offsetHeight || 360; }
+            ctx.fillStyle = '#040c14'; ctx.fillRect(0, 0, c.width, c.height);
+            ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '12px Inter';
+            ctx.textAlign = 'center'; ctx.fillText('Đang tải video...', c.width / 2, c.height / 2); ctx.textAlign = 'left';
+            cam.drawLoop = requestAnimationFrame(realDraw); return;
+          }
+
+          // 2. Vẽ ROI + vạch dừng + panel đèn tín hiệu — LUÔN hiển thị khi đang giám sát,
+          // giống hệt video mẫu xuất ra từ tab Video (process_video vẽ polylines/line/đèn
+          // trên MỌI frame, không chỉ lúc đang chỉnh sửa).
+          if (cam.roiPts && cam.roiPts.length >= 3) {
+            ctx.beginPath();
+            ctx.moveTo(cam.roiPts[0][0], cam.roiPts[0][1]);
+            for (let i = 1; i < cam.roiPts.length; i++) ctx.lineTo(cam.roiPts[i][0], cam.roiPts[i][1]);
+            ctx.closePath();
+            ctx.strokeStyle = '#ffff00'; ctx.lineWidth = 2; ctx.stroke();
+          }
+          if (cam.linePts && cam.linePts.length >= 2) {
+            const [lx1, ly1] = cam.linePts[0]; const [lx2, ly2] = cam.linePts[1];
+            ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(lx1, ly1); ctx.lineTo(lx2, ly2); ctx.stroke();
+          }
+          const lightOn = cam.light === 'RED';
+          ctx.fillStyle = 'rgba(30,30,30,0.85)'; ctx.fillRect(10, 10, 175, 45);
+          ctx.beginPath(); ctx.arc(35, 33, 14, 0, Math.PI * 2);
+          ctx.fillStyle = lightOn ? '#ff0000' : '#00ff00'; ctx.fill();
+          ctx.fillStyle = '#fff'; ctx.font = '13px Arial,sans-serif';
+          ctx.fillText(`DEN ${lightOn ? 'DO' : 'XANH'}`, 58, 38);
+
+          // 3. Vẽ box + nhãn từng xe — xanh lá = bình thường, đỏ = vi phạm (giống video mẫu)
+          // NGOẠI SUY (dead-reckoning) theo vận tốc thực tế + làm mượt, tất cả tính lại mỗi
+          // khung hình (~60fps) ngay tại đây — bỏ tầng làm mượt thứ 2 từng nằm trong
+          // gridDetectCycle (2 tầng cũ xung đột: tầng ở gridDetectCycle chỉ chạy 1 lần mỗi
+          // khi server trả lời và có cộng vận tốc, nhưng bị tầng này GHI ĐÈ ngay khung hình kế
+          // tiếp vì target lúc đó lại là h.curBbox thô — đứng yên tới lần server sau).
+          // FIX (nguyên nhân chính khiến box "cà giật + chậm hơn xe"): trước đây target mà
+          // vòng lặp 60fps này đuổi theo là h.curBbox — bbox thô, ĐỨNG YÊN cho tới khi có dữ
+          // liệu server mới. Vì alphaPos=0.5 chạy ở 60fps nên box "đuổi kịp" vị trí thô đó chỉ
+          // trong vài khung hình (~50ms) rồi ĐỨNG HÌNH tại đó, trong khi xe ngoài đời vẫn đang
+          // chạy tiếp -> mắt thấy box nhảy-rồi-đứng-im liên tục, luôn chậm hơn xe thật.
+          // Nay target mỗi khung hình là VỊ TRÍ DỰ ĐOÁN = vị trí thô mới nhất + vận tốc đã biết
+          // * thời gian đã trôi qua kể từ lúc có dữ liệu đó -> target luôn "chạy" liên tục giữa
+          // 2 lần server trả lời, box không còn đứng khựng chờ nữa.
+          const nowDraw = performance.now();
+          const liveDets = Object.values(cam.trackHist || {})
+            .filter(h => nowDraw - h.curT < 3000) // quá 3s không thấy nữa -> coi như xe đã rời khung hình, bỏ vẽ
+            .map(h => {
+              const rawCenter = [(h.curBbox[0] + h.curBbox[2]) / 2, (h.curBbox[1] + h.curBbox[3]) / 2];
+              const rawSize = [h.curBbox[2] - h.curBbox[0], h.curBbox[3] - h.curBbox[1]];
+
+              // Lần đầu thấy track này -> khởi tạo thẳng bằng vị trí thô, không nội suy từ đâu cả
+              if (!h.displayCenter) {
+                h.displayCenter = [...rawCenter];
+                h.displaySize = [...rawSize];
+                h.displayVel = [0, 0];
+                h._lastRawT = h.curT;
+                h._prevRawCenter = rawCenter;
+                h._sizeHist = [rawSize];
+              }
+
+              // 1. Cập nhật vận tốc + lịch sử kích thước CHỈ khi có dữ liệu thô MỚI thật sự
+              // (curT vừa đổi so với lần vẽ trước) — so sánh 2 lần raw liên tiếp.
+              if (h.curT !== h._lastRawT) {
+                const dt = Math.max((h.curT - h._lastRawT) / 1000, 0.001);
+                const rawVx = (rawCenter[0] - h._prevRawCenter[0]) / dt;
+                const rawVy = (rawCenter[1] - h._prevRawCenter[1]) / dt;
+                h.displayVel = [
+                  h.displayVel[0] * 0.6 + rawVx * 0.4,
+                  h.displayVel[1] * 0.6 + rawVy * 0.4,
+                ];
+                h._prevRawCenter = rawCenter;
+                h._lastRawT = h.curT;
+
+                // FIX (box bị "phóng to thu nhỏ" khi bám xe): YOLO đo kích thước bbox không ổn
+                // định tuyệt đối giữa các khung hình liên tiếp (rung nhẹ do nét mờ chuyển động/
+                // góc nhìn/ánh sáng), dù vẫn cùng 1 xe — 1 khung đo lệch (to hoặc nhỏ hơn thật)
+                // là đủ để displaySize "giật" theo ngay. Dùng MEDIAN của 3 lần đo thô gần nhất
+                // thay vì lấy thẳng giá trị mới nhất -> 1 khung bị nhiễu bất thường sẽ bị bỏ
+                // qua (median không bị kéo bởi outlier như trung bình cộng/EMA thường).
+                h._sizeHist.push(rawSize);
+                if (h._sizeHist.length > 3) h._sizeHist.shift();
+              }
+              const sortedW = h._sizeHist.map(s => s[0]).sort((a, b) => a - b);
+              const sortedH = h._sizeHist.map(s => s[1]).sort((a, b) => a - b);
+              const medianSize = [sortedW[Math.floor(sortedW.length / 2)], sortedH[Math.floor(sortedH.length / 2)]];
+
+              // 2. Vị trí DỰ ĐOÁN tại đúng thời điểm đang vẽ = vị trí thô mới nhất + vận tốc *
+              // thời gian đã trôi qua kể từ lúc thô đó được ghi nhận. Giới hạn ngoại suy tối đa
+              // 400ms để tránh box "bay" lố quá xa nếu server trả lời chậm bất thường/mất kết nối.
+              const extrapS = Math.min(nowDraw - h.curT, 400) / 1000;
+              const predictedCenter = [
+                rawCenter[0] + h.displayVel[0] * extrapS,
+                rawCenter[1] + h.displayVel[1] * extrapS,
+              ];
+
+              // 3. Làm mượt: mỗi khung hình, box tiến 1 phần về phía vị trí DỰ ĐOÁN (mục tiêu
+              // luôn di chuyển) thay vì về phía bbox thô đứng yên như code cũ. Kích thước làm
+              // mượt hướng về MEDIAN (đã lọc nhiễu) thay vì rawSize trực tiếp.
+              const alphaPos = LIVE_BOX_SMOOTHING.alphaPos;
+              const alphaSize = LIVE_BOX_SMOOTHING.alphaSize;
+              h.displayCenter = [
+                h.displayCenter[0] + alphaPos * (predictedCenter[0] - h.displayCenter[0]),
+                h.displayCenter[1] + alphaPos * (predictedCenter[1] - h.displayCenter[1]),
+              ];
+              h.displaySize = [
+                h.displaySize[0] + alphaSize * (medianSize[0] - h.displaySize[0]),
+                h.displaySize[1] + alphaSize * (medianSize[1] - h.displaySize[1]),
+              ];
+
+              const bbox = [
+                h.displayCenter[0] - h.displaySize[0] / 2,
+                h.displayCenter[1] - h.displaySize[1] / 2,
+                h.displayCenter[0] + h.displaySize[0] / 2,
+                h.displayCenter[1] + h.displaySize[1] / 2,
+              ];
+              return { ...h.info, bbox };
+            });
+          liveDets.forEach(d => {
+            const [x1, y1, x2, y2] = d.bbox;
+            const isVio = d.is_violation, isNew = d.is_new_violation;
+            const col = isVio ? '#ff0000' : '#00ff00';
+            if (isNew) { ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 4; ctx.strokeRect(x1 - 2, y1 - 2, x2 - x1 + 4, y2 - y1 + 4); }
+            ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            const lbl = `#${d.track_id ?? ''} ${(d.type || 'obj').slice(0, 6)}`;
+            ctx.font = 'bold 11px Inter,sans-serif';
+            const tw = ctx.measureText(lbl).width + 6;
+            ctx.fillStyle = col + 'dd'; ctx.fillRect(x1, y1 - 17, tw, 17);
+            ctx.fillStyle = '#000'; ctx.fillText(lbl, x1 + 3, y1 - 4);
+            if (d.plate_text && d.plate_text !== 'KHO_DOC_BIEN') {
+              ctx.font = 'bold 12px Inter,monospace';
+              const pw = ctx.measureText(d.plate_text).width + 8;
+              ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(x1, y2, pw, 18);
+              ctx.fillStyle = '#ffff00'; ctx.fillText(d.plate_text, x1 + 4, y2 + 13);
+            } else if (isVio) {
+              ctx.font = 'bold 10px Inter';
+              ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(x1, y2, 128, 17);
+              ctx.fillStyle = '#ffaa00'; ctx.fillText('⚠ CHUA DOC BIEN', x1 + 4, y2 + 12);
+            }
+            if (isVio) {
+              ctx.font = 'bold 13px Inter,sans-serif';
+              const vw = ctx.measureText('VI PHAM!').width + 12;
+              ctx.fillStyle = 'rgba(220,0,0,0.88)'; ctx.fillRect(x1, y1 - 36, vw, 19);
+              ctx.fillStyle = '#fff'; ctx.fillText('VI PHAM!', x1 + 6, y1 - 21);
+            }
+          });
+        } catch (err) {
+          console.error(`[${cam.name}] Lỗi khi vẽ khung hình:`, err);
+          if (!cam._lastDrawErrShown || Date.now() - cam._lastDrawErrShown > 15000) {
+            log(`❌ ${cam.name}: Lỗi hiển thị — ${err.message || err}`, 'err');
+            cam._lastDrawErrShown = Date.now();
+          }
+        }
+        cam.drawLoop = requestAnimationFrame(realDraw);
+      };
+
+      if (v && v.readyState >= 2) { realDraw(); }
+      else if (v) { v.addEventListener('canplay', () => realDraw(), { once: true }); }
+      else { realDraw(); }
+    }
+
+    function startGridDetectLoop(cam) {
+      cam.running = true;
+      if (!cam._offCanvas) { cam._offCanvas = document.createElement('canvas'); } // dùng lại 1 canvas, đỡ cấp phát liên tục
+      gridDetectCycle(cam);
+    }
+
+    // FIX (box vẫn giật/khựng dù backend đã nhanh, khác hẳn tab Video mượt sẵn): bản cũ
+    // dùng setInterval cố định mỗi 300ms + cờ busy để bỏ qua nếu request trước chưa xong.
+    // Lúc backend còn chậm (0.5-2s+/khung) thì mốc 300ms không quan trọng, vì gần như lúc
+    // nào cũng đang busy. Nhưng SAU KHI đã tối ưu backend (~50-100ms/khung, xem log gần
+    // đây) thì chính mốc 300ms LẠI TRỞ THÀNH giới hạn mới: backend rảnh gần 2/3 thời gian,
+    // nhưng frontend chỉ hỏi tối đa 3.3 lần/giây vì đợi đúng lịch hẹn giờ, không hỏi ngay
+    // dù có thể hỏi được. Đây chính là lý do tab Giám sát vẫn chưa mượt bằng tab Video —
+    // tab Video xử lý toàn bộ khung hình gốc offline (không giới hạn thời gian thật), còn
+    // tab này bị giới hạn bởi con số 300ms cố định, không phải bởi tốc độ AI nữa.
+    // Cách sửa: bỏ setInterval, THAY BẰNG vòng lặp tự lên lịch gọi lại chính nó NGAY sau
+    // khi xử lý xong 1 vòng — tốc độ cập nhật box vì vậy tự bám theo đúng khả năng thật
+    // của backend tại thời điểm đó (nhanh thì hỏi liên tục, chậm thì tự giãn ra), không
+    // còn bị chặn bởi một con số đoán trước. Vì luôn tự gọi lại SAU KHI vòng trước đã
+    // hoàn tất (thành công hoặc lỗi), 2 request không bao giờ chồng nhau -> không cần cờ
+    // busy/watchdog 5s như cũ nữa (thiết kế mới tự nhiên loại bỏ khả năng chồng request).
+    async function gridDetectCycle(cam) {
+      if (!cam.running) return;
+      const v = document.getElementById(cam.id + '_v');
+      if (!v || !v.videoWidth) { cam._detectTimer = setTimeout(() => gridDetectCycle(cam), 200); return; }
+      const captureTime = performance.now(); // mốc thời gian THẬT của vị trí xe trong khung hình này — lấy tại lúc CHỤP, không phải lúc nhận kết quả về, để nội suy bù đúng đủ độ trễ mạng+AI thay vì chỉ bù phần thời gian sau khi nhận
+      const MAX_W = 640; // hạ từ 960 -> 640: ảnh nhỏ hơn = encode/upload/inference nhanh hơn nữa, đỡ giật (đổi lại nhận diện xe rất xa/nhỏ có thể kém hơn chút)
+      const scale = Math.min(1, MAX_W / v.videoWidth);
+      const off = cam._offCanvas;
+      const ow = Math.round(v.videoWidth * scale), oh = Math.round(v.videoHeight * scale);
+      if (off.width !== ow || off.height !== oh) { off.width = ow; off.height = oh; }
+      off.getContext('2d').drawImage(v, 0, 0, ow, oh);
+      off.toBlob(async blob => {
+        let nextDelay = 15; // mọi chuyện suôn sẻ -> gần như hỏi lại ngay, chỉ chừa chút hơi cho trình duyệt (không phải 300ms cố định nữa)
+        try {
+          const fd = new FormData();
+          fd.append('file', blob, 'frame.jpg');
+          fd.append('light_status', cam.light || 'RED');
+          // Quy đổi ROI/vạch dừng (đang lưu theo độ phân giải gốc) về đúng tỉ lệ khung hình đã resize gửi lên
+          const roiScaled = cam.roiPts && cam.roiPts.length >= 3 ? cam.roiPts.map(([x, y]) => [x * scale, y * scale]) : [];
+          const lineScaled = cam.linePts && cam.linePts.length >= 2 ? cam.linePts.map(([x, y]) => [x * scale, y * scale]) : [];
+          fd.append('roi_points', JSON.stringify(roiScaled));
+          fd.append('line_points', JSON.stringify(lineScaled));
+          fd.append('conf_vehicle', '0.15');
+          fd.append('conf_plate', '0.35');
+          fd.append('ocr_confidence', '0.25');
+          // Giới hạn tối đa 8s cho 1 lần gọi: nếu server treo/không phản hồi thì tự huỷ để
+          // vòng lặp luôn gọi lại được, không bao giờ "kẹt" vĩnh viễn (khác cờ busy cũ, vốn
+          // chỉ ngừng ĐẾM là busy chứ không thực sự huỷ request đang treo).
+          const res = await apiFetch(`${API}/stream-frame/${cam.id}`, { method: 'POST', body: fd, signal: AbortSignal.timeout(8000) });
+          const data = await res.json();
+          if (data.error) {
+            // Trước đây lỗi từ backend (VD model AI chưa tải được) bị bỏ qua âm thầm,
+            // khiến camera "chạy" nhưng vĩnh viễn không có box mà không ai biết vì sao.
+            console.error(`[${cam.name}] stream-frame lỗi:`, data.error);
+            if (!cam._lastErrShown || Date.now() - cam._lastErrShown > 15000) {
+              log(`❌ ${cam.name}: Backend lỗi khi phát hiện xe — ${data.error}`, 'err');
+              cam._lastErrShown = Date.now();
+            }
+            nextDelay = 500; // lỗi thì nghỉ lâu hơn 1 chút, tránh spam liên tục khi server đang có vấn đề
+            return;
+          }
+          // Quy đổi bbox trả về (theo khung đã resize) ngược lại về độ phân giải gốc để vẽ đúng vị trí
+          const inv = 1 / scale;
+          const newDet = (data.detections || []).map(d => ({
+            ...d, bbox: d.bbox.map(v => v * inv)
+          }));
+          // Lưu dữ liệu THÔ theo track_id (bbox + thời điểm) — KHÔNG tính/làm mượt gì ở đây nữa.
+          // Toàn bộ việc tính vận tốc, ngoại suy (dead-reckoning) và làm mượt để box chạy liên
+          // tục giữa 2 lần server trả kết quả đã được gộp về một chỗ duy nhất: realDraw() (chạy
+          // mỗi khung hình ~60fps). Trước đây có 2 tầng làm mượt riêng (ở đây và ở realDraw)
+          // xung đột nhau -> tầng ở đây gần như vô dụng vì bị realDraw ghi đè ngay khung hình kế
+          // tiếp, và target mà realDraw đuổi theo lúc đó lại là bbox thô đứng yên -> box "nhảy
+          // rồi đứng hình" chờ tới lần server sau, gây cảm giác cà giật + chậm hơn xe thật.
+          // Dùng captureTime (lúc CHỤP khung hình, đầu hàm) chứ không phải lúc nhận response về
+          // -> bù đúng đủ toàn bộ độ trễ mạng+AI vào tuổi dữ liệu, không bị "quên" mất phần đó.
+          const now = captureTime;
+          if (!cam.trackHist) cam.trackHist = {};
+          newDet.forEach(d => {
+            const prev = cam.trackHist[d.track_id];
+            cam.trackHist[d.track_id] = {
+              curBbox: d.bbox,
+              curT: now,
+              // Giữ nguyên state hiển thị (displayCenter/displaySize/displayVel/_lastRawT/
+              // _prevRawCenter/_sizeHist) qua các lần cập nhật server — realDraw() sẽ tự khởi
+              // tạo nếu chưa có (track mới) và tự cập nhật mỗi khung hình dựa trên curBbox/curT.
+              displayCenter: prev ? prev.displayCenter : null,
+              displaySize: prev ? prev.displaySize : null,
+              displayVel: prev ? prev.displayVel : null,
+              _lastRawT: prev ? prev._lastRawT : null,
+              _prevRawCenter: prev ? prev._prevRawCenter : null,
+              _sizeHist: prev ? prev._sizeHist : null,
+              info: d,
+            };
+          });
+          const seenIds = new Set(newDet.map(d => d.track_id));
+          Object.keys(cam.trackHist).forEach(tid => { if (!seenIds.has(+tid)) delete cam.trackHist[tid]; });
+          cam.lastDetections = newDet;
+          // Hiện thời gian xử lý thực tế của backend lên SYSTEM LOG (mỗi ~5s, tránh spam) —
+          // để biết TRỰC TIẾP trên web đang mất bao lâu/frame, không cần đoán qua video nữa.
+          if (data.process_ms != null && (!cam._lastTimingLog || Date.now() - cam._lastTimingLog > 5000)) {
+            const slow = data.process_ms > 500;
+            log(`${slow ? '🐢' : 'ℹ️'} ${cam.name}: backend xử lý ${data.process_ms}ms/khung hình${slow ? ' — CHẬM, đây là nguyên nhân chính khiến box bị trễ' : ''}`, slow ? 'warn' : 'info');
+            cam._lastTimingLog = Date.now();
+          }
+          if (data.new_violations && data.new_violations.length > 0) {
+            data.new_violations.forEach(vio => {
+              const plateStr = (!vio.plate_text || vio.plate_text === 'KHO_DOC_BIEN') ? '⚠ Chưa đọc biển' : vio.plate_text;
+              log(`⚠️ ${cam.name} [${vio.time_str}] VI PHẠM! ${plateStr}`, 'warn');
+              addLiveVioEntry(cam.name, { ...vio, cam_id: cam.id });
+              // Đã bỏ banner đỏ nhấp nháy trên khung hình (showCamVioAlert) theo yêu cầu —
+              // vừa che khuất xe, vừa tạo/xoá DOM node + chạy CSS animation liên tục mỗi khi
+              // có vi phạm mới (nhiều vi phạm dồn dập -> tạo nhiều node cùng lúc), cộng dồn
+              // thêm việc cho main thread của trình duyệt đúng lúc cần mượt nhất. Vi phạm vẫn
+              // được ghi đầy đủ ở System Log và panel Vi Phạm phía trên như bình thường.
+            });
+          }
+          // Biển số/ảnh bằng chứng đọc NGẦM ở backend xong muộn hơn (không chặn box) ->
+          // khi thấy 1 xe đang vi phạm mà biển số vừa có kết quả, cập nhật LẠI đúng dòng
+          // đã thêm ở panel Vi Phạm phía trên (không tạo dòng mới, không lặp lại).
+          if (!cam._vioResolved) cam._vioResolved = new Set();
+          newDet.forEach(d => {
+            if (!d.is_violation || !d.plate_text) return;
+            const key = d.track_id;
+            if (cam._vioResolved.has(key)) return;
+            cam._vioResolved.add(key);
+            updateLiveVioEntry(cam.id, d.track_id, d.plate_text, d.evidence_path);
+          });
+        } catch (e) {
+          console.error(`[${cam.name}] Lỗi vòng lặp phát hiện xe:`, e);
+          if (!cam._lastErrShown || Date.now() - cam._lastErrShown > 15000) {
+            log(`❌ ${cam.name}: ${e.message || e}`, 'err');
+            cam._lastErrShown = Date.now();
+          }
+          nextDelay = 500;
+        }
+        finally {
+          // Tự lên lịch gọi lại NGAY tại đây (không phải setInterval cố định) — đây chính
+          // là thay đổi cốt lõi giúp tốc độ cập nhật box tự bám theo tốc độ backend thật.
+          if (cam.running) cam._detectTimer = setTimeout(() => gridDetectCycle(cam), nextDelay);
+        }
+      }, 'image/jpeg', 0.8);
+    }
+
+    function resumeGridCam(cam) {
+      if (!cam.drawLoop) startGridDrawLoop(cam);
+    }
+
+    function clearGridDraw(camId) {
+      const cam = gridCams.find(c => c.id === camId); if (!cam) return;
+      cam.roiPts = null; cam.linePts = null; cam.drawMode = null; cam.tmpClicks = [];
+      document.getElementById(camId + '_drawhint').textContent = '';
+      document.getElementById(camId + '_broi').classList.remove('active');
+      document.getElementById(camId + '_bline').classList.remove('active');
+      saveCameraConfig(cam);
+    }
+
+    function setGridLight(camId, light) {
+      const cam = gridCams.find(c => c.id === camId); if (!cam) return;
+      cam.light = light; cam.defaultLight = light;
+      // Bấm chỉnh đèn thủ công trên card -> tắt lịch đèn tự động (nếu có), tránh bị lịch
+      // ghi đè ngay ở khung hình kế tiếp khiến nút bấm như "không có tác dụng"
+      if (cam.schedule && cam.schedule.length > 0) {
+        cam.schedule = [];
+        log(`ℹ️ ${cam.name}: đã tắt lịch đèn tự động vì bạn vừa chỉnh đèn thủ công`, 'info');
+      }
+      document.getElementById(camId + '_bred').classList.toggle('active', light === 'RED');
+      document.getElementById(camId + '_bgreen').classList.toggle('active', light === 'GREEN');
+      saveCameraConfig(cam);
+    }
+
+    // Lưu cấu hình camera (tên/quận/ROI/vạch dừng/đèn) vào DB — không bị mất khi tải lại trang.
+    // Lưu ý: bản thân nguồn video (webcam/file) không lưu được lâu dài qua trình duyệt vì lý do
+    // bảo mật/kỹ thuật — sau khi tải lại trang cần chọn lại nguồn, nhưng cấu hình ROI/đèn vẫn còn nguyên.
+    async function saveCameraConfig(cam) {
+      if (!authToken || !currentUser) return;
+      if (!['admin', 'truc_camera'].includes(currentUser.role)) return;
+      try {
+        await apiFetch(`${API}/cameras/${cam.id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cam_id: cam.id, name: cam.name, district: cam.district, source_type: cam.type,
+            roi: cam.roiPts, line_pts: cam.linePts, light: cam.light
+          })
+        });
+      } catch (e) { /* không chặn UI nếu lưu lỗi, chỉ log nhẹ */ log('Không lưu được cấu hình camera: ' + e.message, 'warn'); }
+    }
+
+    // Hiển thị danh sách cấu hình camera đã lưu trước đó (từ DB), cho phép "kết nối lại" nguồn video
+    let _savedCamsLoaded = false;
+    async function loadSavedCameras() {
+      if (!authToken) return;
+      const box = document.getElementById('savedCamsBox');
+      if (!box) return;
+      try {
+        const res = await apiFetch(`${API}/cameras`);
+        const data = await res.json();
+        const notYetOpen = data.cameras.filter(c => !gridCams.find(g => g.id === c.cam_id));
+        if (!notYetOpen.length) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div style="font-size:12px;color:var(--dim);font-family:Inter,sans-serif;margin-bottom:4px">📌 Cấu hình camera đã lưu — bấm để kết nối lại nguồn video:</div>` +
+          notYetOpen.map(c => `
+        <div data-camid="${c.cam_id}" style="display:flex;justify-content:space-between;align-items:center;background:#0e141d;border:1px dashed var(--border);padding:6px 10px;border-radius:8px;font-size:12.5px">
+          <span style="color:var(--text)">${c.name}</span>
+          <span style="color:var(--dim);font-size:12px">${c.district || ''} ${c.roi ? '· ROI' : ''} ${c.line_pts ? '· Vạch dừng' : ''}</span>
+          <button class="btn bs" style="padding:3px 8px;font-size:11.5px;white-space:nowrap" onclick="reconnectSavedCamera('${c.cam_id}')">🔌 KẾT NỐI LẠI</button>
+        </div>`).join('');
+      } catch (e) { }
+    }
+
+    async function reconnectSavedCamera(camId) {
+      try {
+        const res = await apiFetch(`${API}/cameras`);
+        const data = await res.json();
+        const cfg = data.cameras.find(c => c.cam_id === camId);
+        if (!cfg) return;
+        // Không cần set gridNewType nữa — addGridCamera nhận source_type từ cfg trực tiếp
+        await addGridCamera(camId, cfg, null, null);
+      } catch (e) { log('Lỗi kết nối lại camera: ' + e.message, 'warn'); }
+    }
+
+    // ── Ghi hình / Xuất video từ Giám sát đa cam (live) ─────────────────────────
+    // Nguồn ghi = chính canvas "${camId}_c" đang được vẽ liên tục mỗi khung hình bởi
+    // startGridDrawLoop (video gốc + ROI/vạch/đèn + box nhận diện + biển số) — tức là
+    // ghi ĐÚNG những gì cán bộ đang nhìn thấy trên màn hình giám sát, không cần backend
+    // xử lý gì thêm. canvas.captureStream() tạo 1 MediaStream video sống từ canvas, rồi
+    // MediaRecorder ghi stream đó thành file .webm ngay trên trình duyệt.
+    function toggleCamRecord(camId) {
+      const cam = gridCams.find(c => c.id === camId); if (!cam) return;
+      if (cam.recording) stopCamRecord(cam); else startCamRecord(cam);
+    }
+
+    function startCamRecord(cam) {
+      if (cam.recording) return;
+      const c = document.getElementById(cam.id + '_c');
+      if (!c) return;
+      if (typeof c.captureStream !== 'function' || typeof MediaRecorder === 'undefined') {
+        log(`❌ "${cam.name}": trình duyệt này không hỗ trợ ghi hình từ canvas`, 'err');
+        return;
+      }
+      // Canvas phải có kích thước thật (đã có khung hình) mới captureStream ra được —
+      // nếu cam vừa thêm còn đang "ĐANG TẢI VIDEO..." thì width/height = 0.
+      if (!c.width || !c.height) {
+        log(`⚠ "${cam.name}": chưa có hình để ghi, đợi camera tải xong rồi thử lại`, 'warn');
+        return;
+      }
+      let mime = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp8';
+      if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
+      try {
+        const stream = c.captureStream(25); // 25 khung hình/giây là đủ mượt cho video giám sát, đỡ file nặng
+        cam.recordedChunks = [];
+        cam.recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 });
+        cam.recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) cam.recordedChunks.push(e.data); };
+        cam.recorder.onstop = () => downloadCamRecording(cam);
+        cam.recorder.start(1000); // gom dữ liệu mỗi 1s — không mất hết nếu tab bị đóng đột ngột giữa chừng
+        cam.recording = true;
+        cam.recordStartTime = Date.now();
+        updateRecordUI(cam);
+        log(`⏺ Bắt đầu ghi hình "${cam.name}"`, 'ok');
+      } catch (err) {
+        log(`❌ Không thể ghi "${cam.name}": ${err.message || err}`, 'err');
+      }
+    }
+
+    function stopCamRecord(cam) {
+      if (!cam.recording || !cam.recorder) return;
+      try { cam.recorder.stop(); } catch (err) { /* đã dừng sẵn */ }
+      cam.recording = false;
+      updateRecordUI(cam);
+    }
+
+    function downloadCamRecording(cam) {
+      if (!cam.recordedChunks || cam.recordedChunks.length === 0) return;
+      const blob = new Blob(cam.recordedChunks, { type: cam.recorder?.mimeType || 'video/webm' });
+      cam.recordedChunks = [];
+      const url = URL.createObjectURL(blob);
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const safeName = (cam.name || cam.id).replace(/[^\w\-]+/g, '_');
+      const a = document.createElement('a');
+      a.href = url; a.download = `${safeName}_${ts}.webm`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      log(`💾 Đã lưu video "${cam.name}" — mở lại được bằng trình phát video bất kỳ (VLC, Chrome...)`, 'ok');
+    }
+
+    function updateRecordUI(cam) {
+      const btn = document.getElementById(cam.id + '_brec');
+      if (btn) {
+        btn.textContent = cam.recording ? '⏹' : '⏺';
+        btn.title = cam.recording ? 'Dừng ghi & tải video' : 'Ghi hình';
+        btn.style.background = cam.recording ? 'rgba(220,0,0,0.95)' : 'rgba(0,180,255,0.85)';
+      }
+      const badge = document.getElementById(cam.id + '_recbadge');
+      if (badge) badge.style.display = cam.recording ? 'flex' : 'none';
+      const rt = document.getElementById(cam.id + '_rectime');
+      if (rt) rt.textContent = '00:00';
+    }
+
+    function toggleAllRecording() {
+      if (gridCams.length === 0) { log('⚠ Chưa có camera nào đang giám sát để ghi hình', 'warn'); return; }
+      const btn = document.getElementById('recAllBtn');
+      const anyRecording = gridCams.some(c => c.recording);
+      if (anyRecording) {
+        gridCams.forEach(c => { if (c.recording) stopCamRecord(c); });
+        if (btn) btn.textContent = '⏺ GHI TẤT CẢ';
+        log('⏹ Đã dừng ghi & đang tải video của tất cả camera', 'ok');
+      } else {
+        gridCams.forEach(c => startCamRecord(c));
+        if (btn) btn.textContent = '⏹ DỪNG & TẢI TẤT CẢ';
+        log(`⏺ Bắt đầu ghi hình ${gridCams.length} camera`, 'ok');
+      }
+    }
+
+    function removeGridCamera(camId) {
+      const idx = gridCams.findIndex(c => c.id === camId);
+      if (idx === -1) return;
+      const cam = gridCams[idx];
+      if (cam.recording) stopCamRecord(cam); // xoá cam nhưng đang ghi dở -> vẫn lưu lại video trước khi mất
+      if (cam.stream) cam.stream.getTracks().forEach(t => t.stop());
+      if (cam.drawLoop) cancelAnimationFrame(cam.drawLoop);
+      if (cam._detectTimer) clearTimeout(cam._detectTimer);
+      cam.running = false;
+      gridCams.splice(idx, 1);
+      const el = document.getElementById(camId + '_wrap'); if (el) el.remove();
+      document.getElementById('gridStatus').textContent = gridCams.length
+        ? '> ' + gridCams.length + ' camera đang hoạt động'
+        : '> Chưa có camera nào. Bấm "➕ THÊM CAMERA" để bắt đầu.';
+      log(`Đã xoá ${cam.name}`);
+      if (authToken && currentUser && ['admin', 'truc_camera'].includes(currentUser.role)) {
+        apiFetch(`${API}/cameras/${camId}`, { method: 'DELETE' }).catch(() => { });
+        apiFetch(`${API}/stream-frame/${camId}/reset`, { method: 'DELETE' }).catch(() => { });
+      }
+    }
+
+  </script>
+</body>
+
+</html>

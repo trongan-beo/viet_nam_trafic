@@ -1,0 +1,49 @@
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+.vite/
+*.log
+npm-debug.log*
+
+# ===== Environment / Secrets =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===== Database =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== AI Models (nặng, không nên commit thẳng) =====
+*.pt
+*.pth
+*.onnx
+*.weights
+
+# ===== Data / Uploads / Evidence =====
+uploads/
+evidence/
+mock_violations.json
+
+# ===== IDE / Editor =====
+.vscode/
+.idea/
+*.swp
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
