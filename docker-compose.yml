@@ -1,0 +1,61 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: traffic_ai_backend
+    restart: always
+    volumes:
+      - ./backend/models:/app/models
+      - uploads_data:/app/uploads
+      - evidence_data:/app/evidence
+      - ./backend/traffic_ai.db:/app/traffic_ai.db
+      - ./backend/mock_violations.json:/app/mock_violations.json
+      - ./backend/mock_review_queue.json:/app/mock_review_queue.json
+      - ./backend/main.py:/app/main.py
+    environment:
+      - PLATE_MODEL_PATH=/app/models/best_final.pt
+      - DETECT_WORKERS=4
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=https://trafficai.online
+    container_name: traffic_ai_frontend
+    restart: always
+    depends_on:
+      - backend
+    expose:
+      - "80"
+
+  proxy:
+    image: nginx:alpine
+    container_name: traffic_ai_proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - frontend
+      - backend
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: traffic_ai_tunnel
+    profiles:
+      - tunnel
+    restart: "no"
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-eyJhIjoiNmYzODI4ZjJkM2JkNzY1N2QwZjRlODcyZTRiZGI0N2QiLCJ0IjoiNDdkMWYwMTYtM2YzNi00OTMyLTliZmQtYzM1YmIwMjUwZmFhIiwicyI6Ik1tWXlOV0ZsT1RZdE1UTm1NQzAwWVRVMkxUZ3paalF0WXpNNVpUZGhNekprNnpFMyJ9}
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - proxy
+
+volumes:
+  uploads_data:
+  evidence_data:

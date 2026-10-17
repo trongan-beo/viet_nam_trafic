@@ -109,10 +109,17 @@ def init_auth_db():
         source_type TEXT,
         roi_json TEXT,
         line_pts_json TEXT,
+        turn_zone_json TEXT,
+        turn_confirm_json TEXT,
         light TEXT DEFAULT 'RED',
         created_by TEXT,
         updated_at TEXT NOT NULL
     )""")
+    # Migration cho DB cũ đã tồn tại từ trước khi có 2 cột vùng-rẽ/cổng-xác-nhận-rẽ — ALTER TABLE
+    # bỏ qua lỗi "duplicate column" nếu cột đã có sẵn (trường hợp DB mới, vừa tạo từ CREATE TABLE ở trên).
+    for _col in ("turn_zone_json", "turn_confirm_json"):
+        try: cur.execute(f"ALTER TABLE camera_configs ADD COLUMN {_col} TEXT")
+        except sqlite3.OperationalError: pass
     conn.commit()
     # Seed tài khoản admin mặc định nếu DB user trống — BẮT BUỘC đổi mật khẩu sau khi cài đặt thật
     cur.execute("SELECT COUNT(*) c FROM users")
@@ -260,6 +267,10 @@ class CameraConfigBody(BaseModel):
     source_type: Optional[str] = "webcam"
     roi: Optional[list] = None      # [[x,y],[x,y],[x,y],[x,y]] polygon 4 điểm (giống tab Video)
     line_pts: Optional[list] = None # [[x1,y1],[x2,y2]] đường nghiêng 2 điểm (giống tab Video)
+    # Nút giao cho phép rẽ khi đèn đỏ — 2 vùng TÙY CHỌN (bỏ trống = giữ hành vi cũ, phạt ngay
+    # khi cắt vạch lúc đèn đỏ, không đổi gì). Xem chi tiết cơ chế ở resolve_turn_pending().
+    turn_zone: Optional[list] = None    # polygon ≥3 điểm — "vùng rẽ được phép", sát vạch, phía làn rẽ
+    turn_confirm: Optional[list] = None # polygon ≥3 điểm — "cổng xác nhận rẽ", đặt sang đường cắt ngang
     light: Optional[str] = "RED"
 
 @app.get("/cameras")
@@ -272,21 +283,27 @@ async def list_cameras(user: dict = Depends(get_current_user)):
         d = dict(r)
         d["roi"] = _json.loads(d["roi_json"]) if d.get("roi_json") else None
         d["line_pts"] = _json.loads(d["line_pts_json"]) if d.get("line_pts_json") else None
-        del d["roi_json"]; del d["line_pts_json"]
+        d["turn_zone"] = _json.loads(d["turn_zone_json"]) if d.get("turn_zone_json") else None
+        d["turn_confirm"] = _json.loads(d["turn_confirm_json"]) if d.get("turn_confirm_json") else None
+        del d["roi_json"]; del d["line_pts_json"]; del d["turn_zone_json"]; del d["turn_confirm_json"]
         out.append(d)
     return {"cameras": out}
 
 @app.put("/cameras/{cam_id}")
 async def upsert_camera(cam_id: str, body: CameraConfigBody, user: dict = Depends(require_role("admin", "truc_camera"))):
     conn = get_db()
-    conn.execute("""INSERT INTO camera_configs(cam_id,name,district,source_type,roi_json,line_pts_json,light,created_by,updated_at)
-                     VALUES(?,?,?,?,?,?,?,?,?)
+    conn.execute("""INSERT INTO camera_configs(cam_id,name,district,source_type,roi_json,line_pts_json,
+                     turn_zone_json,turn_confirm_json,light,created_by,updated_at)
+                     VALUES(?,?,?,?,?,?,?,?,?,?,?)
                      ON CONFLICT(cam_id) DO UPDATE SET name=excluded.name,district=excluded.district,
                      source_type=excluded.source_type,roi_json=excluded.roi_json,line_pts_json=excluded.line_pts_json,
+                     turn_zone_json=excluded.turn_zone_json,turn_confirm_json=excluded.turn_confirm_json,
                      light=excluded.light,updated_at=excluded.updated_at""",
                  (cam_id, body.name, body.district, body.source_type,
                   _json.dumps(body.roi) if body.roi else None,
                   _json.dumps(body.line_pts) if body.line_pts else None,
+                  _json.dumps(body.turn_zone) if body.turn_zone else None,
+                  _json.dumps(body.turn_confirm) if body.turn_confirm else None,
                   body.light, user["username"], datetime.now().isoformat()))
     conn.commit(); conn.close()
     write_audit(user, "CAU_HINH_CAMERA", target=cam_id, detail=f"{body.name} ({body.district})")
@@ -312,6 +329,20 @@ _variant_early_exits = 0  # số lần dừng sớm (không chạy hết 5 biế
 def get_models():
     global _yolo_plate, _yolo_vehicle, _ocr_det, _ocr_nodet
     if _yolo_plate is None:
+        try:
+            import torch
+            _orig_torch_load = torch.load
+            def _compat_torch_load(*args, **kwargs):
+                if "weights_only" not in kwargs:
+                    kwargs["weights_only"] = False
+                return _orig_torch_load(*args, **kwargs)
+            torch.load = _compat_torch_load
+            import ultralytics.nn.tasks
+            if hasattr(torch.serialization, "add_safe_globals"):
+                torch.serialization.add_safe_globals([ultralytics.nn.tasks.DetectionModel])
+        except Exception:
+            pass
+
         from ultralytics import YOLO
         PLATE_PATH   = os.getenv("PLATE_MODEL_PATH",   "models/best_final.pt")
         VEHICLE_PATH = os.getenv("VEHICLE_MODEL_PATH", "models/yolo11n.pt")
@@ -452,6 +483,30 @@ def is_valid_plate_box(bw, bh, area_min=None):
     aspect=bw/bh; area=bw*bh
     area_min = area_min if area_min is not None else PLATE_MIN_AREA_SQUARE
     return (2.0<=aspect<=5.5 and area>=PLATE_MIN_AREA_WIDE) or (0.8<=aspect<2.0 and area>=area_min)
+
+def save_overview_evidence(full_frame, bbox, plate_text: str = "", prefix: str = "overview") -> str:
+    """Lưu ảnh TOÀN CẢNH (nguyên khung hình gốc, KHÔNG crop) tại đúng thời điểm xe vượt vạch.
+    Khác với ảnh cận cảnh (evidence_*.jpg chỉ có riêng chiếc xe), ảnh này giữ nguyên bối cảnh
+    giao lộ và CHỈ khoanh khung đỏ quanh DUY NHẤT xe vi phạm — các xe/phương tiện khác đang có
+    mặt trong khung hình không bị vẽ box, để không gây hiểu nhầm là các xe đó cũng vi phạm."""
+    x1, y1, x2, y2 = bbox
+    h_f, w_f = full_frame.shape[:2]
+    x1, y1 = max(0, x1), max(0, y1)
+    x2, y2 = min(w_f, x2), min(h_f, y2)
+    overview = full_frame.copy()
+    color = (0, 0, 255)  # đỏ (BGR)
+    cv2.rectangle(overview, (x1, y1), (x2, y2), color, 3)
+    label = plate_text if plate_text and plate_text not in ("KHO_DOC_BIEN", "") else "VI PHAM"
+    (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+    ly = y1 - 10 if y1 - 10 - th > 0 else y1 + th + 14
+    cv2.rectangle(overview, (x1, ly - th - 8), (x1 + tw + 10, ly + 4), color, -1)
+    cv2.putText(overview, label, (x1 + 5, ly - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    ts_label = datetime.now().strftime("%H:%M:%S %d/%m/%Y")
+    cv2.putText(overview, ts_label, (10, h_f - 14), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+    uidv = uuid.uuid4().hex[:6]; tsv = datetime.now().strftime("%H%M%S")
+    fname = f"{prefix}_{tsv}_{uidv}.jpg"
+    cv2.imwrite(str(EVIDENCE_DIR / fname), overview)
+    return f"/evidence/{fname}"
 
 def is_two_line_plate(bw, bh): return (bw/max(bh,1))<1.4 and bh>bw*0.6
 def hard_filter(text): return "".join(c for c in text.upper() if c in _ALLOWED)
@@ -751,8 +806,11 @@ async def check_violation(
             if plate_text=="KHO_DOC_BIEN" and is_demo_image:
                 fb=get_fallback_plate(vt, cx, cy, w_img, h_img)
                 if fb: plate_text=fb
-            violations.append({"plate_text":plate_text,"vehicle_type":vt,"confidence":round(vc,3),"ocr_conf":round(ocr_conf,3),"bbox":[x1,y1,x2,y2],"evidence_path":evidence_path})
-            save_violation_to_db(plate_text, vt, evidence_path=evidence_path, created_by=user["username"])
+            # Ảnh toàn cảnh: nguyên khung hình gốc (img), chỉ box riêng xe vi phạm này —
+            # các xe khác trong ảnh (nếu có) không bị vẽ box.
+            overview_path = save_overview_evidence(img, [x1,y1,x2,y2], plate_text=plate_text)
+            violations.append({"plate_text":plate_text,"vehicle_type":vt,"confidence":round(vc,3),"ocr_conf":round(ocr_conf,3),"bbox":[x1,y1,x2,y2],"evidence_path":evidence_path,"overview_path":overview_path})
+            save_violation_to_db(plate_text, vt, evidence_path=evidence_path, overview_path=overview_path, created_by=user["username"])
     return {"light_status":light_status,"violations":violations,"all_vehicles":all_vehicles,"total_violations":len(violations)}
 
 import concurrent.futures as _cf
@@ -785,8 +843,14 @@ _detect_executor = _cf.ThreadPoolExecutor(max_workers=DETECT_WORKERS)  # đổi 
 def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
                    schedule, roi_pts, line_pts,
                    conf_vehicle, conf_plate, ocr_confidence,
-                   frame_skip, frame_w, frame_h, username: str):
-    """Hàm thật chạy trên thread riêng. Cập nhật _jobs[job_id] theo tiến độ."""
+                   frame_skip, frame_w, frame_h, username: str,
+                   turn_zone_pts=None, turn_confirm_pts=None):
+    """Hàm thật chạy trên thread riêng. Cập nhật _jobs[job_id] theo tiến độ.
+    turn_zone_pts/turn_confirm_pts: TÙY CHỌN — bỏ trống thì hành vi giữ nguyên như cũ (phạt
+    ngay khi cắt vạch lúc đèn đỏ). Xem cơ chế đầy đủ ở resolve_turn_pending()."""
+    turn_zone_pts = turn_zone_pts or []
+    turn_confirm_pts = turn_confirm_pts or []
+    use_turn_zone = len(turn_zone_pts) >= 3
     def set_progress(p, msg=""):
         with _jobs_lock:
             _jobs[job_id]["progress"] = p
@@ -800,6 +864,17 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
         return
 
     use_roi = len(roi_pts) >= 3
+    # Phía nào của vạch là phía "đã vượt/vi phạm". Thử suy trước từ ROI (violation_side_sign) —
+    # nhưng CHỈ đúng khi vạch thực sự cắt qua ROI (ROI có điểm ở cả 2 phía vạch). Trong thực tế
+    # rất nhiều camera vẽ ROI không cắt qua vạch (ROI chỉ nằm 1 bên) -> violation_side_sign()
+    # trả về None -> mất hẳn khả năng bắt các track không có lịch sử "phía cũ". Để KHÔNG phụ
+    # thuộc vào việc vẽ ROI đúng cách, ta còn "tự học" dấu vi phạm ngay trong lúc chạy: ngay khi
+    # có 1 track BẤT KỲ được xác nhận vi phạm theo cách cũ (có "phía cũ" + phát hiện đổi phía —
+    # tức có bằng chứng chuyển động thật, không phải đoán), dấu new_side của lần đó CHẮC CHẮN là
+    # phía vi phạm -> lưu lại learned_vio_sign, dùng cho các track mới xuất hiện sau đó (đã ở hẳn
+    # phía vi phạm ngay từ lần đầu thấy, ví dụ track bị đổi ID giữa chừng đúng lúc xe cắt vạch).
+    vio_sign = violation_side_sign(roi_pts, line_pts) if use_roi and len(line_pts) >= 2 else None
+    learned_vio_sign = None
 
     def get_light(sec):
         for s in schedule:
@@ -815,6 +890,8 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
         return
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 25
+    # Quy đổi cửa sổ xác minh rẽ (giây) ra số khung hình THẬT theo fps thật của video này.
+    turn_confirm_max_frames = max(1, int(TURN_CONFIRM_MAX_SEC * fps))
     raw_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     raw_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
@@ -856,17 +933,54 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
                     best_tid = next_id; next_id += 1
                     tracks[best_tid] = {"bbox":det["bbox"],"disp_bbox":det["bbox"],"type":det["type"],
                                          "side":None,"violated":False,"last_seen":frame_idx,
-                                         "plate_text":"","violation_sec":None}
+                                         "plate_text":"","violation_sec":None,
+                                         "pending_turn":None,"turn_confirmed":False}
                     det_to_track[di] = best_tid
 
             for di, det in enumerate(cur_dets):
                 tid = det_to_track[di]; tr = tracks[tid]
                 x1,y1,x2,y2 = det["bbox"]; cx,cy = det["cx"],det["cy"]; vt = det["type"]
                 new_side = side_of_line(cx, cy, line_pts) if len(line_pts) >= 2 else None
+                # Chỉ coi vị trí mới là "đáng tin" nếu đủ xa vạch (ngoài vùng đệm) — tránh vị trí
+                # sát vạch (dễ nhiễu do bbox rung) được dùng để kết luận vượt vạch.
+                new_side_confident = new_side is not None and abs(new_side) >= MIN_LINE_CROSS_DIST_PX
+                # "Đã đang ở đúng phía vi phạm" — ưu tiên vio_sign suy từ ROI, nếu ROI không cắt
+                # qua vạch (vio_sign=None, rất hay gặp vì ROI/vạch được vẽ độc lập) thì dùng
+                # learned_vio_sign (tự học được từ 1 vi phạm CHẮC CHẮN trước đó trong video này).
+                effective_vio_sign = vio_sign if vio_sign is not None else learned_vio_sign
+                on_vio_side = (effective_vio_sign is not None and new_side_confident
+                               and (new_side > 0) == (effective_vio_sign > 0))
+
                 is_vio = False
-                if (not tr["violated"]) and light == "RED" and tr["side"] is not None and new_side is not None:
-                    if (tr["side"] > 0) != (new_side > 0):
-                        is_vio = True; tr["violated"] = True; tr["violation_sec"] = sec
+                if (not tr["violated"]) and (not tr.get("turn_confirmed")) and tr.get("pending_turn") is None \
+                        and light == "RED" and new_side_confident:
+                    crossed = False
+                    if tr["side"] is not None and (tr["side"] > 0) != (new_side > 0):
+                        # Cách cũ: track có lịch sử -> vi phạm khi phát hiện ĐỔI phía. Đây là
+                        # bằng chứng chuyển động THẬT (không phải đoán) -> dùng để "học" luôn
+                        # dấu vi phạm cho các track khác nếu chưa có vio_sign từ ROI.
+                        crossed = True
+                        if vio_sign is None and learned_vio_sign is None:
+                            learned_vio_sign = 1 if new_side > 0 else -1
+                    elif tr["side"] is None and on_vio_side:
+                        # FIX: track chưa có "phía cũ" (mới tạo, hoặc bị đổi track_id giữa chừng
+                        # do mất dấu đúng lúc xe cắt qua vạch — xem assign_tracks_global) nhưng
+                        # NGAY LẦN ĐẦU đã thấy xe nằm ở phía vi phạm -> trước đây bị bỏ sót vì
+                        # không có gì để so sánh "đổi phía", khiến box xe cứ mãi màu xanh dù xe
+                        # đã ở hẳn bên kia vạch trong lúc đèn đỏ. Nay coi luôn là vi phạm, dùng
+                        # vio_sign (ROI) hoặc learned_vio_sign (tự học) để biết phía nào là vi phạm.
+                        crossed = True
+                    if crossed:
+                        # Nút giao cho phép rẽ khi đèn đỏ: nếu điểm cắt vạch nằm trong "vùng rẽ
+                        # được phép" thì CHƯA kết luận ngay — chuyển sang "đang xác minh" (xem
+                        # resolve_turn_pending() bên dưới, mỗi frame). Camera không cấu hình vùng
+                        # rẽ (use_turn_zone=False) thì giữ nguyên hành vi cũ — phạt ngay.
+                        if use_turn_zone and bbox_in_zone([x1,y1,x2,y2], turn_zone_pts):
+                            tr["pending_turn"] = {"since_frame": frame_idx, "start_cx": cx, "start_cy": cy,
+                                                   "vio_sign": (1 if new_side > 0 else -1)}
+                        else:
+                            is_vio = True
+                            tr["violated"] = True; tr["violation_sec"] = sec
 
                 # Làm mượt toạ độ hiển thị (EMA) — giảm giật/rung khi bbox thô lệch nhẹ giữa các lần quét,
                 # KHÔNG dùng disp_bbox này để so khớp track (match_score vẫn dùng "bbox" thô ở trên).
@@ -875,11 +989,53 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
                 tr["disp_bbox"] = [int(a*x1+(1-a)*ox1), int(a*y1+(1-a)*oy1),
                                     int(a*x2+(1-a)*ox2), int(a*y2+(1-a)*oy2)]
                 tr["bbox"] = det["bbox"]; tr["type"] = vt; tr["last_seen"] = frame_idx
-                if new_side is not None: tr["side"] = new_side
+                # Chỉ cập nhật "side" khi điểm đủ xa vạch (ngoài vùng đệm) — nếu không, giữ nguyên
+                # phía cũ đã ghi nhớ (hysteresis), tránh lấy 1 vị trí sát vạch/dễ nhiễu làm mốc so
+                # sánh cho lần kiểm tra sau, gây báo vượt vạch giả khi xe đứng yên sát vạch.
+                if new_side_confident: tr["side"] = new_side
+
+                # Track đang "chờ xác minh rẽ": giữ 1 ảnh crop mới nhất (ghi đè liên tục CHỈ khi
+                # xe còn nằm trong ROI — xem lý do ở nhánh "ra khỏi ROI" bên dưới) phòng khi track
+                # bị mất dấu giữa chừng cần đẩy vào hàng đợi rà soát thủ công. Mỗi frame kiểm tra
+                # đã đủ căn cứ RẼ HỢP LỆ hay VI PHẠM chưa — xem resolve_turn_pending().
+                if tr.get("pending_turn") is not None:
+                    still_in_roi = (not use_roi) or bbox_in_zone([x1,y1,x2,y2], roi_pts)
+                    if still_in_roi:
+                        _pc = frame[max(0,y1):min(height,y2), max(0,x1):min(width,x2)]
+                        if _pc.size > 0: tr["pending_crop"] = _pc.copy()
+                    # Video offline có fps CỐ ĐỊNH và biết trước -> frame_idx là đơn vị thời gian
+                    # đáng tin cậy ở đây (không giống /stream-frame, xem ghi chú ở đó).
+                    outcome = resolve_turn_pending([x1,y1,x2,y2], tr["pending_turn"], line_pts, turn_confirm_pts,
+                                                    frame_idx - tr["pending_turn"]["since_frame"],
+                                                    turn_confirm_max_frames)
+                    if outcome == "wait" and use_roi and not still_in_roi:
+                        # Xe đã ra khỏi TẤT CẢ vùng ROI đã vẽ mà chưa từng xác nhận được rẽ hợp lệ
+                        # (chưa vào cổng xác nhận) -> không chờ hết giờ nữa, chốt
+                        # VI PHẠM ngay tại đây. Ảnh chứng cứ dùng crop đã lưu từ lúc CÒN trong ROI
+                        # (tr["pending_crop"]), không dùng khung hiện tại vì xe có thể đã ra khỏi
+                        # hẳn khung hình hoặc chỉ còn thấy 1 phần — xem khối OCR/evidence bên dưới.
+                        outcome = "violation"
+                        tr["_use_cached_evidence"] = True
+                    if outcome == "turn":
+                        tr["pending_turn"] = None; tr["turn_confirmed"] = True; tr.pop("pending_crop", None)
+                    elif outcome == "violation":
+                        # Hết cửa sổ xác minh mà vẫn đi thẳng -> xe lợi dụng làn rẽ vượt đèn đỏ.
+                        # Chốt vi phạm NGAY TẠI ĐÂY (dùng bbox hiện tại), để khối OCR/evidence
+                        # bên dưới xử lý y hệt như 1 vi phạm phát hiện ngay khi cắt vạch.
+                        tr["pending_turn"] = None
+                        is_vio = True
+                        tr["violated"] = True; tr["violation_sec"] = sec
 
                 if is_vio:
                     pt = ""
-                    crop = frame[max(0,y1):min(height,y2), max(0,x1):min(width,x2)]
+                    # Trường hợp chốt vi phạm vì "ra khỏi ROI lúc đang xác minh rẽ": dùng ảnh đã
+                    # lưu từ lúc xe CÒN trong ROI thay vì crop khung hiện tại (khung hiện tại xe
+                    # đã ở ngoài ROI, có thể đã ra khỏi khung hình hoặc chỉ còn thấy 1 phần).
+                    if tr.pop("_use_cached_evidence", False) and tr.get("pending_crop") is not None \
+                            and tr["pending_crop"].size > 0:
+                        crop = tr["pending_crop"]
+                    else:
+                        crop = frame[max(0,y1):min(height,y2), max(0,x1):min(width,x2)]
                     evidence_path = None
                     if crop.size > 0:
                         rp = yolo_plate.predict(enhance_dark_image(crop), conf=conf_plate, verbose=False)
@@ -899,15 +1055,60 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
                         evidence_fname = f"evidence_{pt or 'unknown'}_{ts3}_{uid3}.jpg"
                         cv2.imwrite(str(EVIDENCE_DIR / evidence_fname), crop)
                         evidence_path = f"/evidence/{evidence_fname}"
+                    # Ảnh toàn cảnh: dùng "frame" gốc (chưa crop) tại đúng frame xe vượt vạch,
+                    # chỉ khoanh box đỏ quanh xe vi phạm này, các xe khác trong khung không bị box.
+                    overview_path = save_overview_evidence(frame, [x1,y1,x2,y2], plate_text=pt)
                     tr["plate_text"] = pt if pt else f"#{tid} CHUA DOC DUOC"
                     logs.append({"frame":frame_idx,"time_s":round(sec,1),"vehicle_type":vt,
                                  "plate_text":pt or "KHO_DOC_BIEN","light":light,
-                                 "track_id":tid,"evidence_path":evidence_path})
-                    save_violation_to_db(pt, vt, evidence_path=evidence_path,
+                                 "track_id":tid,"evidence_path":evidence_path,"overview_path":overview_path})
+                    save_violation_to_db(pt, vt, evidence_path=evidence_path, overview_path=overview_path,
                                          video_time_s=sec, track_id=tid, created_by=username)
 
             stale = [tid for tid, tr in tracks.items() if frame_idx - tr["last_seen"] > TRACK_MAX_MISS * frame_skip]
-            for tid in stale: del tracks[tid]
+            for tid in stale:
+                str_tr = tracks[tid]
+                if str_tr.get("pending_turn") is not None:
+                    _pc = str_tr.get("pending_crop")
+                    if _pc is not None and _pc.size > 0:
+                        # Mất dấu (che khuất, ra khỏi khung hình...) TRONG lúc đang xác minh rẽ,
+                        # CHƯA từng xác nhận được rẽ hợp lệ -> coi như "ra khỏi vùng theo dõi mà
+                        # chưa chứng minh được đang rẽ", chốt VI PHẠM luôn (không chờ tới lúc mất
+                        # dấu hẳn mới lặng lẽ đẩy vào hàng đợi rà soát — theo đúng đề xuất: không
+                        # đi qua cổng xác nhận thì phải chốt, ảnh chứng cứ dùng khung LÚC CÒN THẤY
+                        # xe rõ nhất, không phải khung hiện tại vì xe đã biến mất khỏi khung hình).
+                        pt = ""
+                        rp = yolo_plate.predict(enhance_dark_image(_pc), conf=conf_plate, verbose=False)
+                        for pr in rp:
+                            if pr.boxes is None: continue
+                            for pb in pr.boxes:
+                                px1,py1,px2,py2 = map(int, pb.xyxy[0].cpu().numpy())
+                                if not is_valid_plate_box(px2-px1, py2-py1): continue
+                                pc2 = _pc[max(0,py1-4):min(_pc.shape[0],py2+4), max(0,px1-4):min(_pc.shape[1],px2+4)]
+                                if pc2.size == 0: continue
+                                cands, _ = _ocr_one_crop(pc2, ocr_confidence)
+                                p2, _, _ = majority_vote(cands)
+                                if p2: pt = p2
+                                break
+                            break
+                        uid3 = uuid.uuid4().hex[:6]; ts3 = datetime.now().strftime("%H%M%S")
+                        evidence_fname = f"evidence_{pt or 'unknown'}_{ts3}_{uid3}.jpg"
+                        cv2.imwrite(str(EVIDENCE_DIR / evidence_fname), _pc)
+                        evidence_path = f"/evidence/{evidence_fname}"
+                        vsec = str_tr["pending_turn"]["since_frame"]/fps
+                        logs.append({"frame":frame_idx,"time_s":round(vsec,1),"vehicle_type":str_tr.get("type"),
+                                     "plate_text":pt or "KHO_DOC_BIEN","light":"RED",
+                                     "track_id":tid,"evidence_path":evidence_path,"overview_path":evidence_path})
+                        save_violation_to_db(pt, str_tr.get("type"), evidence_path=evidence_path,
+                                             overview_path=evidence_path, video_time_s=vsec,
+                                             track_id=tid, created_by=username)
+                    else:
+                        # Hiếm gặp: mất dấu ngay khung đầu tiên, CHƯA kịp lưu được ảnh nào cả ->
+                        # không có gì làm bằng chứng, đẩy cán bộ xem lại thay vì phạt không ảnh.
+                        push_review_case(str_tr.get("type"), track_id=tid,
+                                          video_time_s=str_tr["pending_turn"]["since_frame"]/fps,
+                                          snapshot_path=None, created_by=username)
+                del tracks[tid]
 
         # ─── VẼ BOX Ở MỌI FRAME (kể cả frame không chạy detect) ───────────────────────────
         # Trước đây toàn bộ cv2.rectangle/putText nằm TRONG khối "if frame_idx % frame_skip==0",
@@ -919,13 +1120,17 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
             if frame_idx - tr["last_seen"] > DRAW_MAX_MISS * frame_skip:
                 continue  # mất dấu hơi lâu rồi (rất có thể xe đã đi khỏi/đổi track) -> ẩn box, tránh để lại "tàn ảnh"
             x1,y1,x2,y2 = tr["disp_bbox"]; vt = tr["type"]
-            col = (0,0,255) if tr["violated"] else (0,255,0)
+            if tr["violated"]: col = (0,0,255)
+            elif tr.get("pending_turn") is not None: col = (0,190,255)  # hổ phách — đang xác minh rẽ
+            else: col = (0,255,0)
             cv2.rectangle(frame, (x1,y1), (x2,y2), col, 2)
             cv2.putText(frame, f"#{tid} {vt[:6]}", (x1,y1-6), cv2.FONT_HERSHEY_SIMPLEX, 0.4, col, 1)
             if tr["violated"]:
                 cv2.putText(frame, "VI PHAM!", (x1,y1-25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
                 cv2.putText(frame, tr["plate_text"], (x1,y2+20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0,255,255), 2)
                 cv2.putText(frame, f"Vi pham luc {tr['violation_sec']:.1f}s", (x1,y2+40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 1)
+            elif tr.get("pending_turn") is not None:
+                cv2.putText(frame, "DANG XAC MINH RE...", (x1,y1-25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,190,255), 2)
 
         lc = (0,0,255) if light == "RED" else (0,255,0)
         cv2.rectangle(frame, (10,10), (185,55), (30,30,30), -1)
@@ -937,6 +1142,12 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
         if use_roi:
             pts = np.array(roi_pts, dtype=np.int32).reshape(-1,1,2)
             cv2.polylines(frame, [pts], True, (0,255,255), 2)
+        if use_turn_zone:
+            pts_tz = np.array(turn_zone_pts, dtype=np.int32).reshape(-1,1,2)
+            cv2.polylines(frame, [pts_tz], True, (255,190,0), 2)
+        if len(turn_confirm_pts) >= 3:
+            pts_tc = np.array(turn_confirm_pts, dtype=np.int32).reshape(-1,1,2)
+            cv2.polylines(frame, [pts_tc], True, (0,140,255), 2)
         out.write(frame); frame_idx += 1
 
         # Cập nhật progress mỗi 30 frame (tránh lock quá nhiều)
@@ -972,6 +1183,7 @@ def _run_video_job(job_id: str, tmp_in: str, tmp_out: str,
 async def process_video(
     file: UploadFile=File(...), light_schedule: str=Form("[]"),
     roi_points: str=Form("[]"), line_points: str=Form("[]"),
+    turn_zone_points: str=Form("[]"), turn_confirm_points: str=Form("[]"),
     conf_vehicle: float=Form(0.15), conf_plate: float=Form(0.35),
     ocr_confidence: float=Form(0.30), frame_skip: int=Form(3),
     frame_w: int=Form(0), frame_h: int=Form(0),
@@ -979,13 +1191,19 @@ async def process_video(
 ):
     """Nhận file video, trả job_id ngay lập tức (<1s).
     Xử lý chạy nền trên ThreadPool — không block request khác.
-    Frontend polling GET /jobs/{job_id} để theo dõi tiến độ."""
+    Frontend polling GET /jobs/{job_id} để theo dõi tiến độ.
+    turn_zone_points/turn_confirm_points: TÙY CHỌN, dùng cho nút giao cho phép rẽ khi đèn đỏ —
+    bỏ trống (mảng rỗng, mặc định) thì hành vi giữ nguyên như cũ."""
     try: schedule = _json.loads(light_schedule)
     except: schedule = []
     try: roi_pts = [tuple(p) for p in _json.loads(roi_points)]
     except: roi_pts = []
     try: line_pts = [tuple(p) for p in _json.loads(line_points)]
     except: line_pts = []
+    try: turn_zone_pts = [tuple(p) for p in _json.loads(turn_zone_points)]
+    except: turn_zone_pts = []
+    try: turn_confirm_pts = [tuple(p) for p in _json.loads(turn_confirm_points)]
+    except: turn_confirm_pts = []
 
     suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
     tmp_in = tempfile.mktemp(suffix=suffix)
@@ -1009,6 +1227,7 @@ async def process_video(
         schedule, roi_pts, line_pts,
         conf_vehicle, conf_plate, ocr_confidence,
         frame_skip, frame_w, frame_h, user["username"],
+        turn_zone_pts, turn_confirm_pts,
     )
     # Đổi status sang processing ngay (thread có thể chưa chạy tới)
     with _jobs_lock:
@@ -1107,24 +1326,36 @@ async def realtime_frame(
 # Dict lưu state riêng cho mỗi camera_id
 # cam_states[cam_id] = {tracks, next_id, frame_idx, violated_tracks}
 cam_states: dict = {}
-STREAM_TRACK_MAX_MISS = 12   # số frame không thấy thì xoá track
+STREAM_TRACK_MAX_MISS = 12   # số frame không thấy thì xoá track (giữ dài để không làm gián đoạn
+                              # bám các track hợp lệ đang di chuyển nhanh/bị che khuất tạm thời;
+                              # rủi ro ghép nhầm vào track đã violated đã được chặn riêng, đúng chỗ,
+                              # ở assign_tracks_global — không cần rút ngắn tuổi thọ track để bù)
 
 def get_cam_state(cam_id: str) -> dict:
     if cam_id not in cam_states:
         cam_states[cam_id] = {
-            "tracks": {},      # tid -> {bbox, type, side, violated, last_seen, plate}
+            "tracks": {},      # tid -> {bbox, type, side, violated, last_seen, plate, pending_turn, turn_confirmed}
             "next_id": 1,
             "frame_idx": 0,
             "violation_count": 0,
+            # Dấu (sign) đại diện phía "đã vượt/vi phạm" của vạch dừng, tự học được ngay trong
+            # phiên giám sát này (xem chi tiết lý do cần cái này ở /stream-frame bên dưới).
+            # Persist theo cam_id vì /stream-frame được gọi lại nhiều lần (mỗi lần 1 frame),
+            # không giữ được biến cục bộ giữa các lần gọi như hàm xử lý video 1 lần chạy hết.
+            "learned_vio_sign": None,
         }
     return cam_states[cam_id]
 
-def _run_plate_ocr_bg(crop, tid, vt, username, tracks, conf_plate, ocr_confidence):
+def _run_plate_ocr_bg(crop, tid, vt, username, tracks, conf_plate, ocr_confidence,
+                       full_frame=None, bbox=None):
     """Chạy NGẦM trong thread pool riêng (_ocr_bg_executor) — KHÔNG chặn response của
     /stream-frame. Đọc biển số xong thì cập nhật tracks[tid]['plate'] để lần poll kế
     tiếp từ trình duyệt tự động nhận được biển số thật (thay vì phải chờ ngay trong
-    request lúc phát hiện vi phạm, vốn có thể mất 0.5-3s+ và làm box bị đứng hình)."""
-    plate_text, evidence_path = "", None
+    request lúc phát hiện vi phạm, vốn có thể mất 0.5-3s+ và làm box bị đứng hình).
+    full_frame/bbox (nếu truyền vào): dùng để lưu thêm ảnh TOÀN CẢNH — nguyên khung hình
+    tại đúng lúc xe vượt vạch, chỉ box riêng xe vi phạm này, khác với "crop" vốn chỉ chứa
+    mỗi chiếc xe."""
+    plate_text, evidence_path, overview_path = "", None, None
     try:
         yolo_plate, _, _, _ = get_models()
         if crop is not None and crop.size > 0:
@@ -1146,6 +1377,8 @@ def _run_plate_ocr_bg(crop, tid, vt, username, tracks, conf_plate, ocr_confidenc
             evidence_fname = f"evidence_{plate_text or 'unknown'}_{ts3}_{uid3}.jpg"
             cv2.imwrite(str(EVIDENCE_DIR / evidence_fname), crop)
             evidence_path = f"/evidence/{evidence_fname}"
+        if full_frame is not None and bbox is not None:
+            overview_path = save_overview_evidence(full_frame, bbox, plate_text=plate_text)
     except Exception as e:
         print(f"[OCR-BG] Lỗi đọc biển số nền (track {tid}): {e}")
     finally:
@@ -1153,8 +1386,9 @@ def _run_plate_ocr_bg(crop, tid, vt, username, tracks, conf_plate, ocr_confidenc
         if tr is not None:
             tr["plate"] = plate_text or "KHO_DOC_BIEN"
             tr["evidence_path"] = evidence_path
+            tr["overview_path"] = overview_path
         try:
-            save_violation_to_db(plate_text, vt, evidence_path=evidence_path,
+            save_violation_to_db(plate_text, vt, evidence_path=evidence_path, overview_path=overview_path,
                                   track_id=tid, created_by=username)
         except Exception as e:
             print(f"[OCR-BG] Lỗi lưu vi phạm vào DB (track {tid}): {e}")
@@ -1166,6 +1400,8 @@ async def stream_frame(
     light_status: str = Form("RED"),
     roi_points: str = Form("[]"),   # JSON [[x,y],...] polygon ≥3 điểm (giống tab Video)
     line_points: str = Form("[]"),  # JSON [[x1,y1],[x2,y2]] đường nghiêng (giống tab Video)
+    turn_zone_points: str = Form("[]"),    # TÙY CHỌN — vùng rẽ được phép (nút giao cho phép rẽ khi đèn đỏ)
+    turn_confirm_points: str = Form("[]"), # TÙY CHỌN — cổng xác nhận rẽ, sang đường cắt ngang
     conf_vehicle: float = Form(0.15),
     conf_plate: float = Form(0.35),
     ocr_confidence: float = Form(0.25),
@@ -1195,8 +1431,24 @@ async def stream_frame(
     except: roi_pts = []
     try: line_pts = [tuple(p) for p in _json.loads(line_points)]
     except: line_pts = []
+    try: turn_zone_pts = [tuple(p) for p in _json.loads(turn_zone_points)]
+    except: turn_zone_pts = []
+    try: turn_confirm_pts = [tuple(p) for p in _json.loads(turn_confirm_points)]
+    except: turn_confirm_pts = []
     use_roi = len(roi_pts) >= 3
     has_line = len(line_pts) >= 2
+    use_turn_zone = len(turn_zone_pts) >= 3
+    # QUAN TRỌNG: khác với video offline (fps cố định, biết trước), /stream-frame được frontend
+    # gọi liên tục — tốc độ poll thật phụ thuộc tốc độ xử lý (mô hình, mạng, tải máy chủ...), có
+    # thể vài chục lần/giây, KHÔNG PHẢI ~1 lần/giây. Coi 1 lần gọi ~ 1 giây (bản trước đây làm vậy)
+    # khiến cửa sổ "đang xác minh rẽ" hết hạn chỉ sau chưa tới 1 giây thực tế trong thực tế chạy
+    # nhanh -> xe đang rẽ đúng bị chốt VI PHẠM trước khi kịp vào vùng cam. Sửa: dùng THỜI GIAN THỰC
+    # (time.time()) để đo cửa sổ xác minh rẽ cho đúng TURN_CONFIRM_MAX_SEC giây thật, bất kể tốc
+    # độ poll nhanh hay chậm.
+    # Y hệt cơ chế đã áp cho tab Video: suy phía vi phạm từ ROI nếu vạch cắt qua ROI, nếu không
+    # (rất hay gặp vì ROI/vạch vẽ độc lập với nhau) thì dùng learned_vio_sign đã tự học được từ
+    # phiên giám sát trước đó của CHÍNH camera này (persist trong cam_states[cam_id]).
+    vio_sign = violation_side_sign(roi_pts, line_pts) if use_roi and has_line else None
 
     content = await file.read()
     img = cv2.imdecode(np.frombuffer(content, np.uint8), cv2.IMREAD_COLOR)
@@ -1217,7 +1469,7 @@ async def stream_frame(
         for box in rv[0].boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
             cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-            # Lọc theo polygon ROI (giống process_video dùng point_in_quad)
+            # ROI là ranh giới phát hiện: không đưa detection bên ngoài vào tracker.
             if use_roi and not point_in_quad(cx, cy, roi_pts): continue
             vt = VEHICLE_CLASSES.get(int(box.cls[0].item()), "Khac")
             cur_dets.append({"bbox": [x1, y1, x2, y2], "cx": cx, "cy": cy,
@@ -1232,7 +1484,8 @@ async def stream_frame(
             best_tid = state["next_id"]; state["next_id"] += 1
             tracks[best_tid] = {"bbox": det["bbox"], "type": det["type"],
                                 "side": None, "violated": False,
-                                "last_seen": frame_idx, "plate": ""}
+                                "last_seen": frame_idx, "plate": "",
+                                "pending_turn": None, "turn_confirmed": False}
             det_to_track[di] = best_tid
 
     # ── Kiểm tra vi phạm + OCR ──
@@ -1245,16 +1498,75 @@ async def stream_frame(
 
         # Phía xe so với đường vạch dừng 2 điểm nghiêng — dùng side_of_line như process_video
         new_side = side_of_line(cx, cy, line_pts) if has_line else None
+        # Chỉ coi vị trí mới là "đáng tin" nếu đủ xa vạch (ngoài vùng đệm) — quan trọng hơn cả ở
+        # đây vì /stream-frame chỉ nhận ~1 frame/giây (gap lớn hơn nhiều so với process_video),
+        # nên jitter tương đối giữa 2 lần đo dễ bị khuếch đại hơn.
+        new_side_confident = new_side is not None and abs(new_side) >= MIN_LINE_CROSS_DIST_PX
+        effective_vio_sign = vio_sign if vio_sign is not None else state["learned_vio_sign"]
+        on_vio_side = (effective_vio_sign is not None and new_side_confident
+                       and (new_side > 0) == (effective_vio_sign > 0))
         is_new_vio = False
 
-        if (not tr["violated"]) and light_status == "RED" and has_line:
-            if tr["side"] is not None and new_side is not None:
-                if (tr["side"] > 0) != (new_side > 0):
+        if (not tr["violated"]) and (not tr.get("turn_confirmed")) and tr.get("pending_turn") is None \
+                and light_status == "RED" and has_line and new_side_confident:
+            crossed = False
+            if tr["side"] is not None and (tr["side"] > 0) != (new_side > 0):
+                # Có lịch sử -> vi phạm khi phát hiện ĐỔI phía (bằng chứng chuyển động thật).
+                crossed = True
+                if vio_sign is None and state["learned_vio_sign"] is None:
+                    state["learned_vio_sign"] = 1 if new_side > 0 else -1
+            elif tr["side"] is None and on_vio_side:
+                # FIX: track chưa có "phía cũ" (mới tạo, hoặc bị đổi track_id giữa chừng do mất
+                # dấu đúng lúc xe cắt qua vạch) nhưng NGAY LẦN ĐẦU đã ở phía vi phạm -> trước đây
+                # bị bỏ sót hoàn toàn ở /stream-frame vì không có gì để so sánh "đổi phía", khiến
+                # box xe cứ mãi màu xanh dù xe đã ở hẳn bên kia vạch trong lúc đèn đỏ.
+                crossed = True
+            if crossed:
+                # Nút giao cho phép rẽ khi đèn đỏ: cắt vạch NGAY TRONG vùng rẽ được phép thì
+                # CHƯA kết luận ngay — chuyển sang "đang xác minh" (xem resolve_turn_pending() ở
+                # dưới, chạy lại mỗi lần có detection mới cho track này). Không cấu hình vùng rẽ
+                # (use_turn_zone=False) thì giữ nguyên hành vi cũ — phạt ngay.
+                if use_turn_zone and bbox_in_zone([x1,y1,x2,y2], turn_zone_pts):
+                    # since_ts = mốc THỜI GIAN THỰC (time.time()), KHÔNG dùng frame_idx — xem giải
+                    # thích ở đầu hàm vì sao (tốc độ poll không cố định, khác video offline).
+                    tr["pending_turn"] = {"since_frame": frame_idx, "since_ts": time.time(),
+                                           "start_cx": cx, "start_cy": cy,
+                                           "vio_sign": (1 if new_side > 0 else -1)}
+                else:
                     is_new_vio = True; tr["violated"] = True
                     state["violation_count"] += 1
 
         tr["bbox"] = det["bbox"]; tr["type"] = vt; tr["last_seen"] = frame_idx
-        if new_side is not None: tr["side"] = new_side
+        # Chỉ cập nhật "side" khi điểm đủ xa vạch (ngoài vùng đệm) — giữ nguyên phía cũ đã ghi
+        # nhớ nếu vị trí mới còn mập mờ sát vạch (hysteresis), tránh báo vượt vạch giả.
+        if new_side_confident: tr["side"] = new_side
+
+        # Track đang "chờ xác minh rẽ": mỗi lần có detection mới, kiểm tra đã đủ căn cứ RẼ HỢP
+        # LỆ hay VI PHẠM chưa (xem resolve_turn_pending()). Giữ 1 ảnh crop mới nhất (ghi đè liên
+        # tục CHỈ khi xe còn trong ROI — xem nhánh "ra khỏi ROI" bên dưới) phòng khi track mất
+        # dấu giữa chừng, cần đẩy vào hàng đợi rà soát thủ công.
+        if tr.get("pending_turn") is not None:
+            still_in_roi = (not use_roi) or bbox_in_zone([x1,y1,x2,y2], roi_pts)
+            if still_in_roi:
+                _pc = img[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
+                if _pc.size > 0: tr["pending_crop"] = _pc.copy()
+            outcome = resolve_turn_pending([x1,y1,x2,y2], tr["pending_turn"], line_pts, turn_confirm_pts,
+                                            time.time() - tr["pending_turn"]["since_ts"], TURN_CONFIRM_MAX_SEC)
+            if outcome == "wait" and use_roi and not still_in_roi:
+                # Xe đã ra khỏi TẤT CẢ vùng ROI đã vẽ mà chưa từng xác nhận được rẽ hợp lệ (chưa
+                # vào cổng xác nhận) -> không chờ hết giờ nữa, chốt VI PHẠM ngay.
+                # Ảnh chứng cứ dùng crop đã lưu từ lúc CÒN trong ROI (tr["pending_crop"]) — xem
+                # khối kích hoạt OCR nền bên dưới.
+                outcome = "violation"
+                tr["_use_cached_evidence"] = True
+            if outcome == "turn":
+                tr["pending_turn"] = None; tr["turn_confirmed"] = True; tr.pop("pending_crop", None)
+            elif outcome == "violation":
+                # Hết cửa sổ xác minh mà vẫn đi thẳng -> xe lợi dụng làn rẽ vượt đèn đỏ. Chốt vi
+                # phạm NGAY TẠI ĐÂY (bbox hiện tại) -> khối OCR nền bên dưới chạy y như bình thường.
+                tr["pending_turn"] = None
+                is_new_vio = True; tr["violated"] = True
+                state["violation_count"] += 1
 
         plate_text = tr.get("plate", "")
         if is_new_vio and not plate_text:
@@ -1263,18 +1575,29 @@ async def stream_frame(
             # hình lâu nhất. Nên: trả kết quả box NGAY (tạm coi "chưa đọc được biển"), còn việc
             # đọc biển số + lưu ảnh bằng chứng + lưu DB thì đẩy sang chạy nền ở thread pool riêng.
             # Khi đọc xong, tr["plate"] sẽ được cập nhật -> lần poll kế tiếp tự hiện biển số thật.
-            crop = img[max(0, y1):min(h, y2), max(0, x1):min(w, x2)].copy()
+            # Trường hợp chốt vi phạm vì "ra khỏi ROI lúc đang xác minh rẽ": dùng ảnh đã lưu từ
+            # lúc xe CÒN trong ROI thay vì crop khung hiện tại (lúc này xe đã ở ngoài ROI, có thể
+            # đã ra khỏi khung hình hoặc chỉ còn thấy 1 phần).
+            if tr.pop("_use_cached_evidence", False) and tr.get("pending_crop") is not None \
+                    and tr["pending_crop"].size > 0:
+                crop = tr["pending_crop"]
+            else:
+                crop = img[max(0, y1):min(h, y2), max(0, x1):min(w, x2)].copy()
+            # Bản sao NGUYÊN khung hình (không crop) tại đúng lúc phát hiện vượt vạch — chuyển
+            # cho thread nền để vẽ ảnh toàn cảnh (chỉ box riêng xe này) mà không chặn response.
+            full_frame_snapshot = img.copy()
             now_s = datetime.now().strftime("%H:%M:%S")
             new_violations.append({
                 "track_id": tid, "plate_text": "KHO_DOC_BIEN",
                 "vehicle_type": vt, "time_str": now_s,
-                "evidence_path": None, "cam_id": cam_id,
+                "evidence_path": None, "overview_path": None, "cam_id": cam_id,
             })
             try:
                 if OCR_BG_ENABLED:
                     asyncio.get_event_loop().run_in_executor(
                         _ocr_bg_executor, _run_plate_ocr_bg,
-                        crop, tid, vt, user["username"], tracks, conf_plate, ocr_confidence)
+                        crop, tid, vt, user["username"], tracks, conf_plate, ocr_confidence,
+                        full_frame_snapshot, [x1, y1, x2, y2])
             except Exception as _e:
                 print(f"[stream-frame] Không khởi chạy được OCR nền: {_e}")
 
@@ -1283,13 +1606,41 @@ async def stream_frame(
             "confidence": round(det["conf"], 3),
             "is_violation": tr["violated"],
             "is_new_violation": is_new_vio,
+            "is_pending_turn": tr.get("pending_turn") is not None,
             "plate_text": plate_text,
+            "overview_path": tr.get("overview_path"),
             "evidence_path": tr.get("evidence_path"),
         })
 
     stale = [tid for tid, tr in tracks.items()
              if frame_idx - tr["last_seen"] > STREAM_TRACK_MAX_MISS]
-    for tid in stale: del tracks[tid]
+    for tid in stale:
+        str_tr = tracks[tid]
+        if str_tr.get("pending_turn") is not None:
+            _pc = str_tr.get("pending_crop")
+            if _pc is not None and _pc.size > 0:
+                # Mất dấu (che khuất, ra khỏi khung hình...) TRONG lúc đang xác minh rẽ, CHƯA
+                # từng xác nhận được rẽ hợp lệ -> coi như "ra khỏi vùng theo dõi mà chưa chứng
+                # minh được đang rẽ", chốt VI PHẠM luôn thay vì lặng lẽ đẩy vào hàng đợi rà soát —
+                # dùng đúng khung LÚC CÒN THẤY xe rõ nhất (không phải khung hiện tại, vì xe đã
+                # biến mất khỏi khung hình). Đọc biển số chạy nền như 1 vi phạm bình thường.
+                state["violation_count"] += 1
+                try:
+                    if OCR_BG_ENABLED:
+                        asyncio.get_event_loop().run_in_executor(
+                            _ocr_bg_executor, _run_plate_ocr_bg,
+                            _pc, tid, str_tr.get("type"), user["username"], tracks, conf_plate, ocr_confidence,
+                            None, None)
+                    else:
+                        save_violation_to_db("", str_tr.get("type"), track_id=tid, created_by=user["username"])
+                except Exception as _e:
+                    print(f"[stream-frame] Không khởi chạy được OCR nền cho track mất dấu lúc pending: {_e}")
+            else:
+                # Hiếm gặp: mất dấu ngay khung đầu tiên, CHƯA kịp lưu được ảnh nào cả -> không có
+                # gì làm bằng chứng, đẩy cán bộ xem lại thay vì phạt không ảnh.
+                push_review_case(str_tr.get("type"), cam_id=cam_id, track_id=tid,
+                                  snapshot_path=None, created_by=user["username"])
+        del tracks[tid]
 
     violations = [d for d in detections if d["is_violation"]]
     _ms = (time.time() - _t0) * 1000
@@ -1341,12 +1692,36 @@ def point_in_quad(px, py, quad):
         j = i
     return inside
 
+def bbox_in_zone(bbox, zone_pts):
+    """Coi cả bbox (không chỉ đúng 1 tâm điểm) là 'nằm trong' zone_pts nếu BẤT KỲ điểm đại diện
+    nào của bbox (tâm, và 2 góc dưới trái/phải — xấp xỉ vệt bánh xe chạm đường) rơi vào vùng.
+    Lý do cần kiểm tra nhiều điểm thay vì chỉ tâm bbox: ô tô rộng hơn xe máy 3-4 lần, tâm bbox ô
+    tô có thể rơi ra ngoài 1 vùng vẽ vừa khít cho xe máy dù cả 2 xe cùng đi trong 1 làn — khiến
+    ô tô bị loại khỏi vùng rẽ/ROI một cách oan uổng trong khi xe máy ở vị trí tương tự thì không.
+    Dùng cho: vùng rẽ được phép, cổng xác nhận rẽ, và kiểm tra "còn trong ROI". KHÔNG dùng cho
+    logic cắt vạch cốt lõi (side_of_line) — chỗ đó vẫn cần đúng 1 tâm điểm để tính hướng ổn định."""
+    if not zone_pts or len(zone_pts) < 3: return False
+    x1, y1, x2, y2 = bbox
+    for px, py in (((x1+x2)//2, (y1+y2)//2), (x1, y2), (x2, y2), ((x1+x2)//2, y2)):
+        if point_in_quad(px, py, zone_pts): return True
+    return False
+
+# Ngưỡng khoảng cách tối thiểu (pixel) tính từ tâm xe tới đường vạch dừng để coi là
+# "đã ở hẳn 1 phía" đáng tin cậy. Nhỏ hơn ngưỡng này -> coi là "sát vạch/mập mờ", KHÔNG dùng
+# để cập nhật phía đã ghi nhớ của track lẫn để kết luận vượt vạch. Đây là "vùng đệm" (dead-zone)
+# quanh vạch nhằm chặn báo vượt vạch giả khi xe ĐỨNG YÊN sát vạch nhưng bbox rung nhẹ vài pixel
+# giữa 2 lần detect (rất hay gặp khi xe xếp hàng chờ đèn đỏ ngay trước vạch).
+MIN_LINE_CROSS_DIST_PX = 8
+
 def side_of_line(px, py, line):
-    """line=[(x1,y1),(x2,y2)]. Trả về dấu (>0 / <0 / 0) của tích chéo,
-    cho biết điểm (px,py) nằm ở phía nào của đường thẳng qua line."""
+    """line=[(x1,y1),(x2,y2)]. Trả về khoảng cách vuông góc CÓ DẤU (đơn vị pixel, không phải
+    tích chéo thô) từ điểm (px,py) tới đường thẳng qua line: dấu (+/-) cho biết phía, độ lớn
+    cho biết điểm cách vạch bao xa -> dùng được để so với MIN_LINE_CROSS_DIST_PX bên dưới."""
     if len(line) < 2: return 0
     (x1,y1),(x2,y2) = line
-    return (x2-x1)*(py-y1) - (y2-y1)*(px-x1)
+    cross = (x2-x1)*(py-y1) - (y2-y1)*(px-x1)
+    length = ((x2-x1)**2 + (y2-y1)**2) ** 0.5 or 1
+    return cross / length
 
 def line_crosses_bbox(line, bbox):
     """True nếu đoạn vạch dừng 'line' cắt qua bbox xe — dùng cho ảnh tĩnh
@@ -1370,6 +1745,78 @@ def violation_side_sign(roi_pts, line):
     pos=sum(1 for s in sides if s>0); neg=sum(1 for s in sides if s<0)
     if pos==0 or neg==0: return None
     return 1 if pos<neg else -1
+
+# ════════════════════════════════════════════════════════════════════════════
+# NÚT GIAO CHO PHÉP RẼ KHI ĐÈN ĐỎ — vùng rẽ được phép + cổng xác nhận rẽ
+# ════════════════════════════════════════════════════════════════════════════
+# Vấn đề: bắt lỗi bằng "cắt vạch khi đèn đỏ" khiến xe rẽ hợp lệ (ở nút giao cho phép rẽ phải/
+# trái khi đèn đỏ) bị báo sai, nhưng nếu bỏ qua hẳn làn đó thì lại lọt xe lợi dụng làn rẽ để đi
+# thẳng vượt đèn đỏ — vì ngay tại thời điểm chạm vạch, KHÔNG THỂ biết xe sắp rẽ hay đi thẳng.
+# Cách giải: không quyết định ngay tại khung hình cắt vạch. Nếu điểm cắt nằm trong "vùng rẽ
+# được phép" (polygon do cán bộ trực camera vẽ, sát vạch, phía làn rẽ) thì chuyển track sang
+# trạng thái "đang xác minh" (tr["pending_turn"]), tiếp tục theo dõi quỹ đạo tối đa
+# TURN_CONFIRM_MAX_SEC giây rồi mới chốt: chỉ vào Cổng xác nhận rẽ (vùng cam) mới được coi là
+# rẽ hợp lệ; nếu không vào cổng trước khi ra khỏi ROI/hết giờ thì chốt vi phạm.
+# Video offline (_run_video_job) quy giây này ra SỐ KHUNG HÌNH theo fps thật của video (cố định,
+# biết trước). /stream-frame (giám sát trực tiếp) đo bằng THỜI GIAN THỰC (time.time()) vì tốc độ
+# poll không cố định — KHÔNG được coi 1 lần gọi /stream-frame ~ 1 giây. Camera nào KHÔNG cấu
+# hình vùng rẽ thì giữ nguyên hành vi cũ (phạt ngay khi cắt vạch lúc đèn đỏ), không ảnh hưởng gì.
+#
+# THÊM 1 ĐƯỜNG CHỐT SỚM (ngoài resolve_turn_pending): nếu track đang "đang xác minh" mà ĐI RA
+# KHỎI vùng ROI trước khi kịp vào cổng xác nhận, KHÔNG đợi hết TURN_CONFIRM_MAX_SEC
+# nữa — chốt VI PHẠM ngay lúc đó (xử lý ở _run_video_job/stream_frame, không phải trong
+# resolve_turn_pending, vì cần biết roi_pts). Lý do: 1 xe ra hẳn khỏi ROI mà chưa từng chứng minh
+# được đang rẽ gần như chắc chắn đã/sắp đi thẳng ra khỏi giao lộ — không có lý do để đợi thêm.
+# Ảnh chứng cứ dùng crop đã lưu từ LÚC CÒN TRONG ROI (tr["pending_crop"]), không dùng khung hiện
+# tại vì xe đã ra ngoài ROI, có thể đã ra khỏi khung hình hoặc chỉ còn thấy 1 phần. LƯU Ý: quy tắc
+# này giả định Cổng xác nhận rẽ (và toàn bộ cung đường rẽ) nằm HẲN BÊN TRONG ROI, có khoảng đệm dư
+# dả — nếu ROI vẽ sát ngay mép cổng xác nhận, xe rẽ thật có thể bị chốt nhầm ngay trước khi kịp
+# chạm cổng do ra khỏi ROI sớm hơn 1 nhịp; vẽ ROI rộng rãi bao trùm hết khu vực rẽ để tránh việc này.
+TURN_CONFIRM_MAX_SEC = float(os.getenv("TURN_CONFIRM_MAX_SEC", "3.0"))  # cửa sổ tối đa để 1 xe
+    # "hoàn tất" việc rẽ trước khi bị coi là cố tình đi thẳng — tuỳ hình học giao lộ (giao lộ
+    # rộng/rẽ chéo cần nới thêm), chỉnh qua biến môi trường, không sửa số cứng ở đây.
+TURN_STRAIGHT_MIN_MOVE_PX = float(os.getenv("TURN_STRAIGHT_MIN_MOVE_PX", "24"))
+TURN_STRAIGHT_MAX_ANGLE_DEG = float(os.getenv("TURN_STRAIGHT_MAX_ANGLE_DEG", "20"))
+
+def straight_direction_vector(line_pts, vio_sign):
+    """Hướng đi thẳng qua vạch dừng, suy ra từ pháp tuyến của vạch và phía vi phạm."""
+    if len(line_pts) < 2 or vio_sign is None: return None
+    (x1,y1),(x2,y2) = line_pts
+    lx, ly = x2-x1, y2-y1
+    length = (lx*lx+ly*ly) ** 0.5 or 1
+    gx, gy = -ly/length, lx/length
+    if vio_sign < 0: gx, gy = -gx, -gy
+    return gx, gy
+
+def angle_between_deg(vx, vy, ux, uy):
+    nv = (vx*vx+vy*vy) ** 0.5; nu = (ux*ux+uy*uy) ** 0.5
+    if nv < 1e-6 or nu < 1e-6: return 0.0
+    cos_a = max(-1.0, min(1.0, (vx*ux+vy*uy)/(nv*nu)))
+    return float(np.degrees(np.arccos(cos_a)))
+
+def resolve_turn_pending(bbox, pending, line_pts, turn_confirm_pts, elapsed, max_elapsed):
+    """Xét 1 track đang ở trạng thái 'đang xác minh rẽ' (đã cắt vạch trong vùng rẽ được phép
+    lúc đèn đỏ). "elapsed"/"max_elapsed" do NGƯỜI GỌI tính sẵn theo đơn vị PHÙ HỢP với nguồn dữ
+    liệu (số khung hình thật cho video offline có fps cố định, hoặc GIÂY THỰC cho giám sát trực
+    tiếp — nơi tốc độ poll không cố định, KHÔNG được coi 1 lần poll ~ 1 giây). Trả về:
+      - "turn"      : xe đã vào Cổng xác nhận rẽ (vùng cam) -> RẼ HỢP LỆ, không phạt.
+      - "violation" : hết cửa sổ max_elapsed mà vẫn chưa có bằng chứng rẽ ở trên -> xe lợi dụng
+                      làn rẽ để đi thẳng vượt đèn đỏ -> chốt VI PHẠM.
+      - "wait"      : chưa đủ căn cứ, tiếp tục theo dõi thêm."""
+    cx, cy = (bbox[0]+bbox[2])//2, (bbox[1]+bbox[3])//2
+    if turn_confirm_pts and len(turn_confirm_pts) >= 3 and bbox_in_zone(bbox, turn_confirm_pts):
+        return "turn"
+    # Chỉ vùng cam xác nhận xe rẽ. Quỹ đạo đi thẳng đủ rõ thì chốt sớm, không đợi xe mất khỏi ROI.
+    sx, sy = pending["start_cx"], pending["start_cy"]
+    dx, dy = cx - sx, cy - sy
+    moved = (dx*dx + dy*dy) ** 0.5
+    straight = straight_direction_vector(line_pts, pending.get("vio_sign"))
+    if moved >= TURN_STRAIGHT_MIN_MOVE_PX and straight is not None:
+        if angle_between_deg(dx, dy, straight[0], straight[1]) <= TURN_STRAIGHT_MAX_ANGLE_DEG:
+            return "violation"
+    if elapsed >= max_elapsed:
+        return "violation"
+    return "wait"
 
 def bbox_iou(b1, b2):
     x1,y1,x2,y2 = b1; X1,Y1,X2,Y2 = b2
@@ -1398,8 +1845,16 @@ def assign_tracks_global(cur_dets, tracks, score_fn, min_score):
     for di, det in enumerate(cur_dets):
         for tid, tr in tracks.items():
             s = score_fn(det["bbox"], tr["bbox"], det.get("type"), tr.get("type"))
-            if s > min_score:
-                candidates.append((s, di, tid))
+            if s <= min_score: continue
+            # Rào chắn quan trọng: nếu track này ĐÃ bị đánh dấu vi phạm (violated=True), chỉ cho
+            # phép 1 detection tiếp tục "thừa kế" track đó (và cả trạng thái violated) khi có
+            # chồng lấp bbox THẬT SỰ (IoU>0) — tức có bằng chứng hình ảnh trực tiếp là cùng 1 xe.
+            # Không được ghép chỉ vì khoảng cách gần (dist_score), vì trong cảnh xe đông/xếp hàng
+            # sát nhau, ghép-theo-khoảng-cách rất dễ nhận NHẦM 1 xe khác (chưa hề vi phạm) vào
+            # đúng track đã vi phạm này -> xe vô tội bị gắn "VI PHAM!" ngay dù đứng yên.
+            if tr.get("violated") and bbox_iou(det["bbox"], tr["bbox"]) <= 0:
+                continue
+            candidates.append((s, di, tid))
     candidates.sort(key=lambda c: c[0], reverse=True)  # điểm cao nhất trước
 
     det_to_track = {}
@@ -1441,7 +1896,15 @@ def match_score_stream(det_bbox, tr_bbox, det_type=None, tr_type=None):
     xử lý video hàng loạt vốn cách nhau chỉ vài chục-trăm ms). Với gap lớn như vậy, xe
     (đặc biệt xe máy) hoàn toàn có thể di chuyển xa hơn cả kích thước bbox của chính nó,
     khiến match_score gốc luôn ~0 -> mỗi lần poll xe bị coi là "xe mới" -> track_id đổi
-    liên tục -> mất khả năng nội suy mượt phía client + báo trùng vi phạm nhiều lần."""
+    liên tục -> mất khả năng nội suy mượt phía client + báo trùng vi phạm nhiều lần.
+
+    LƯU Ý: từng thử siết hẳn bán kính này (x3.0 -> x1.5) để chặn ghép nhầm track đã
+    violated=True sang xe khác, nhưng gây hại nhiều hơn lợi — xe máy đi nhanh ĐÚNG LÚC
+    vượt vạch (giữa 2 lần poll cách nhau ~1s) bị mất track giữa chừng, sinh track mới đã
+    nằm sẵn ở phía "trong" -> không còn "phía cũ" để so sánh -> vượt đèn đỏ thật lại
+    KHÔNG được ghi nhận (hiện xanh dù đã qua vạch). Bán kính rộng vẫn cần thiết cho toàn
+    bộ luồng chung; việc chặn ghép nhầm vào track đã violated được xử lý riêng, đúng chỗ
+    hơn, ở assign_tracks_global (bắt buộc IoU>0 mới cho track violated tiếp tục ID)."""
     iou = bbox_iou(det_bbox, tr_bbox)
     bw=tr_bbox[2]-tr_bbox[0]; bh=tr_bbox[3]-tr_bbox[1]
     diag=(bw*bw+bh*bh)**0.5 or 1
@@ -1453,6 +1916,19 @@ def match_score_stream(det_bbox, tr_bbox, det_type=None, tr_type=None):
     if det_type and tr_type and det_type != tr_type:
         score *= 0.6  # khác loại xe -> giảm điểm để tránh nhầm xe máy/ô tô đứng gần nhau
     return score
+
+def parse_vio_time(r) -> datetime:
+    """Chuyển 'thoi_gian_vi_pham' (chuỗi "HH:MM DD/MM/YYYY") thành datetime THẬT để sắp
+    xếp đúng theo thời gian thực tế. LƯU Ý: TRƯỚC ĐÂY code sort() thẳng trên chuỗi string
+    này -> so sánh ký tự đầu tiên trước (tức giờ:phút "HH:MM" đứng trước ngày/tháng/năm
+    trong chuỗi) -> kết quả bị sắp theo GIỜ TRONG NGÀY là chính, không phải theo ngày thực,
+    khiến 1 vi phạm cũ (vd 23:19 01/07/2026) có thể bị xếp TRÊN 1 vi phạm mới hơn nhiều
+    (vd 09:15 16/09/2026) chỉ vì "23" > "09" khi so string. Dùng hàm này làm sort key để
+    sắp xếp đúng theo thời điểm thực."""
+    try:
+        return datetime.strptime(r.get("thoi_gian_vi_pham", ""), "%H:%M %d/%m/%Y")
+    except (ValueError, TypeError):
+        return datetime.min
 
 def normalize_plate(plate: str) -> str:
     """Chuẩn hóa biển số để so sánh: bỏ dấu '-', space, uppercase."""
@@ -1488,6 +1964,7 @@ DON_VI_MAP = {
 }
 
 def save_violation_to_db(plate_text: str, vehicle_type: str, evidence_path: str = None,
+                          overview_path: str = None,
                           video_time_s: float = None, track_id=None, created_by: str = "system"):
     """Lưu vi phạm vượt đèn đỏ vào mock_violations.json.
     Nếu KHÔNG đọc được biển số, vẫn lưu lại đối tượng vi phạm (không bỏ sót),
@@ -1522,7 +1999,8 @@ def save_violation_to_db(plate_text: str, vehicle_type: str, evidence_path: str 
         "trang_thai": "Chưa xử phạt",
         "don_vi_phat_hien": don_vi_gq["ten"],
         "don_vi_giai_quyet": [don_vi_gq],
-        "anh_minh_chung": evidence_path,
+        "anh_minh_chung": evidence_path,   # ảnh cận cảnh (crop riêng xe vi phạm)
+        "anh_toan_canh": overview_path,    # ảnh toàn cảnh giao lộ lúc vi phạm, chỉ box xe này
         "ghi_nhan_boi": created_by,
     }
     db.append(record)
@@ -1531,6 +2009,94 @@ def save_violation_to_db(plate_text: str, vehicle_type: str, evidence_path: str 
     write_audit({"username": created_by, "role": "system"}, "GHI_NHAN_VI_PHAM", target=bien_so_luu,
                 detail=f"Loại xe: {vehicle_type}, đọc được biển: {doc_duoc}")
     return record
+
+# ════════════════════════════════════════════════════════════════════════════
+# HÀNG ĐỢI "CẦN RÀ SOÁT THỦ CÔNG" — dành cho track đang ở trạng thái "đang xác minh rẽ"
+# (đã cắt vạch trong Vùng rẽ được phép lúc đèn đỏ) nhưng bị MẤT DẤU giữa chừng (che khuất,
+# đổi track_id...) trước khi có đủ bằng chứng kết luận rẽ hợp lệ hay vi phạm. KHÔNG tự động
+# phạt (tránh oan xe đang rẽ đúng nhưng bị che khuất) và KHÔNG tự động miễn (tránh lọt xe cố
+# tình đánh võng) — đẩy cho cán bộ trực camera/xử phạt tự xem ảnh rồi quyết định.
+# ════════════════════════════════════════════════════════════════════════════
+REVIEW_QUEUE_FILE = Path("mock_review_queue.json")
+_review_queue = None
+
+def load_review_queue():
+    global _review_queue
+    if _review_queue is None:
+        if REVIEW_QUEUE_FILE.exists():
+            with open(REVIEW_QUEUE_FILE, encoding="utf-8") as f:
+                _review_queue = _json2.load(f)
+        else:
+            _review_queue = []
+    return _review_queue
+
+def _save_review_queue():
+    with open(REVIEW_QUEUE_FILE, "w", encoding="utf-8") as f:
+        _json2.dump(_review_queue, f, ensure_ascii=False, indent=2)
+
+def push_review_case(vehicle_type, cam_id=None, track_id=None, video_time_s=None,
+                      snapshot_path=None, ly_do="Mất dấu khi đang xác minh rẽ",
+                      created_by="system"):
+    q = load_review_queue()
+    case = {
+        "id": uuid.uuid4().hex[:10],
+        "loai_phuong_tien": vehicle_type or "Khac",
+        "cam_id": cam_id,
+        "track_id": track_id,
+        "thoi_diem_trong_video_s": round(video_time_s, 1) if video_time_s is not None else None,
+        "thoi_gian_ghi_nhan": datetime.now().strftime("%H:%M %d/%m/%Y"),
+        "ly_do": ly_do,
+        "anh_snapshot": snapshot_path,
+        "trang_thai": "Chưa xem",   # Chưa xem | Xác nhận vi phạm | Loại bỏ (rẽ hợp lệ)
+        "nguoi_xu_ly": None,
+        "ghi_chu": "",
+        "ghi_nhan_boi": created_by,
+    }
+    q.append(case)
+    _save_review_queue()
+    return case
+
+@app.get("/review-queue")
+async def list_review_queue(trang_thai: Optional[str] = None, user: dict = Depends(get_current_user)):
+    """Xem hàng đợi các track 'cần rà soát thủ công' — rẽ-khi-đèn-đỏ bị mất dấu giữa chừng
+    trong lúc đang xác minh, chưa thể tự động kết luận."""
+    q = load_review_queue()
+    if trang_thai and trang_thai != "all":
+        q = [r for r in q if r.get("trang_thai") == trang_thai]
+    q = sorted(q, key=lambda r: r.get("thoi_gian_ghi_nhan", ""), reverse=True)
+    return {"total": len(q), "cases": q}
+
+class ReviewResolveBody(BaseModel):
+    quyet_dinh: str             # "vi_pham" | "loai_bo"
+    ghi_chu: Optional[str] = ""
+
+@app.patch("/review-queue/{case_id}")
+async def resolve_review_case(case_id: str, body: ReviewResolveBody,
+                               user: dict = Depends(require_role("admin", "truc_camera", "xu_phat"))):
+    """Cán bộ xem ảnh rồi tự quyết định: xác nhận vi phạm (đẩy sang hồ sơ vi phạm chính thức,
+    xử phạt như bình thường) hoặc loại bỏ (coi là rẽ hợp lệ, không lưu vi phạm)."""
+    q = load_review_queue()
+    found = next((r for r in q if r["id"] == case_id), None)
+    if not found:
+        raise HTTPException(404, "Không tìm thấy hồ sơ cần rà soát")
+    if found["trang_thai"] != "Chưa xem":
+        raise HTTPException(400, "Hồ sơ này đã được xử lý trước đó")
+    if body.quyet_dinh not in ("vi_pham", "loai_bo"):
+        raise HTTPException(400, "quyet_dinh phải là 'vi_pham' hoặc 'loai_bo'")
+    if body.quyet_dinh == "vi_pham":
+        found["trang_thai"] = "Xác nhận vi phạm"
+        save_violation_to_db(
+            "", found.get("loai_phuong_tien"),
+            evidence_path=found.get("anh_snapshot"), overview_path=found.get("anh_snapshot"),
+            video_time_s=found.get("thoi_diem_trong_video_s"), track_id=found.get("track_id"),
+            created_by=user["username"])
+    else:
+        found["trang_thai"] = "Loại bỏ (rẽ hợp lệ)"
+    found["nguoi_xu_ly"] = user["username"]
+    found["ghi_chu"] = body.ghi_chu or ""
+    _save_review_queue()
+    write_audit(user, "XU_LY_HANG_DOI_RA_SOAT", target=case_id, detail=body.quyet_dinh)
+    return {"ok": True}
 
 @app.get("/lookup-plate")
 async def lookup_plate(bien_so: str, loai_phuong_tien: Optional[str] = None):
@@ -1562,14 +2128,14 @@ async def violations_chua_doc_duoc(user: dict = Depends(get_current_user)):
     """
     db = load_violation_db()
     results = [r for r in db if not r.get("bien_so_doc_duoc", True)]
-    results.sort(key=lambda r: r.get("thoi_gian_vi_pham",""), reverse=True)
+    results.sort(key=parse_vio_time, reverse=True)
     return {"total": len(results), "violations": results}
 
 @app.get("/violations")
 async def list_all_violations(user: dict = Depends(get_current_user)):
     """Toàn bộ hồ sơ vi phạm — chỉ người đã đăng nhập mới xem được."""
     db = load_violation_db()
-    db.sort(key=lambda r: r.get("thoi_gian_vi_pham",""), reverse=True)
+    db.sort(key=parse_vio_time, reverse=True)
     return {"total": len(db), "violations": db}
 
 @app.get("/violations/stats")
@@ -1682,7 +2248,7 @@ async def filter_violations(
 
         results.append(r)
 
-    results.sort(key=lambda r: r.get("thoi_gian_vi_pham",""), reverse=True)
+    results.sort(key=parse_vio_time, reverse=True)
     total = len(results)
     start = (page-1)*limit
     page_data = results[start:start+limit]

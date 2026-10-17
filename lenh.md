@@ -1,1 +1,4 @@
 cd C:\Users\Admin\Downloads\traffic-ai-fullstack\traffic-ai; .\venv\Scripts\Activate.ps1; cd backend; uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd C:\Users\Admin\Downloads\traffic-ai-fullstack\traffic-ai; .\venv\Scripts\Activate.ps1; cd backend; uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd C:\Users\Admin\Downloads\traffic-ai-fullstack\traffic-ai; .\venv\Scripts\Activate.ps1; cd backend; uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd C:\Users\Admin\Downloads\traffic-ai-fullstack\traffic-ai; .\venv\Scripts\Activate.ps1; cd backend; uvicorn main:app --reload --host 0.0.0.0 --port 8000

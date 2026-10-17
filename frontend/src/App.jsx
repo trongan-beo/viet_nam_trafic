@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL !== undefined
+  ? import.meta.env.VITE_API_URL
+  : (typeof window !== "undefined" && window.location.hostname === "localhost" ? "http://localhost:8000" : "");
 
 const COLORS = {
   red:     "#E24B4A",
